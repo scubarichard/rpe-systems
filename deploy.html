@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1AltX Deploy — Client Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: #0a0a0a;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+.logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.logo h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #58a6ff;
+  letter-spacing: -0.5px;
+}
+.logo span { color: #e0e0e0; font-weight: 400; }
+.logo p {
+  font-size: 13px;
+  color: #666;
+  font-family: 'DM Mono', monospace;
+  margin-top: 6px;
+}
+.card {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 20px;
+}
+.card h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #58a6ff;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #222;
+}
+.field {
+  margin-bottom: 16px;
+}
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  font-family: 'DM Mono', monospace;
+}
+.field input, .field textarea, .field select {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0a0a0a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+.field input:focus, .field textarea:focus, .field select:focus {
+  outline: none;
+  border-color: #58a6ff;
+}
+.field input::placeholder, .field textarea::placeholder {
+  color: #444;
+}
+.field .hint {
+  font-size: 11px;
+  color: #555;
+  margin-top: 4px;
+  font-family: 'DM Mono', monospace;
+}
+.field.required label::after {
+  content: ' *';
+  color: #ff6b6b;
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+.toggle-wrap input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #58a6ff;
+}
+.toggle-wrap label {
+  font-size: 13px;
+  color: #ccc;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: 0;
+}
+.btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary {
+  background: #58a6ff;
+  color: #0a0a0a;
+}
+.btn-primary:hover { background: #79b8ff; }
+.btn-primary:disabled {
+  background: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: transparent;
+  color: #58a6ff;
+  border: 1px solid #333;
+  margin-top: 10px;
+}
+.btn-secondary:hover { border-color: #58a6ff; }
+
+/* Results */
+#results {
+  display: none;
+}
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+}
+.check-item.pass { background: rgba(46,160,67,0.1); color: #2ea043; }
+.check-item.fail { background: rgba(248,81,73,0.1); color: #f85149; }
+.check-item.skip { background: rgba(88,166,255,0.08); color: #58a6ff; }
+.check-icon { font-size: 14px; min-width: 20px; text-align: center; }
+.summary-bar {
+  display: flex;
+  gap: 16px;
+  padding: 14px;
+  background: #111;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+.summary-stat {
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+}
+.summary-stat .num {
+  font-size: 20px;
+  font-weight: 700;
+}
+.summary-stat .lbl {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+}
+.summary-stat.pass .num { color: #2ea043; }
+.summary-stat.fail .num { color: #f85149; }
+.summary-stat.skip .num { color: #58a6ff; }
+
+/* Spinner */
+.spinner {
+  display: none;
+  text-align: center;
+  padding: 40px;
+}
+.spinner .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #58a6ff;
+  margin: 0 4px;
+  animation: bounce 1.2s infinite;
+}
+.spinner .dot:nth-child(2) { animation-delay: 0.2s; }
+.spinner .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+.spinner p {
+  margin-top: 16px;
+  font-size: 13px;
+  color: #666;
+  font-family: 'DM Mono', monospace;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="logo">
+    <h1>1AltX <span>Deploy</span></h1>
+    <p>Client Onboarding Orchestrator</p>
+  </div>
+
+  <form id="deploy-form">
+    <!-- Section 1: Client Identity -->
+    <div class="card">
+      <h2>Client Identity</h2>
+      <div class="row">
+        <div class="field required">
+          <label>Client Name</label>
+          <input type="text" name="client_name" placeholder="Atlanta Flooring Solutions" required>
+        </div>
+        <div class="field required">
+          <label>Client Slug</label>
+          <input type="text" name="client_slug" placeholder="atl-flooring" required>
+          <div class="hint">lowercase, hyphens only</div>
+        </div>
+      </div>
+      <div class="field required">
+        <label>Owner Name</label>
+        <input type="text" name="owner_name" required>
+      </div>
+      <div class="row">
+        <div class="field required">
+          <label>Owner Email</label>
+          <input type="email" name="owner_email" required>
+        </div>
+        <div class="field">
+          <label>Owner Phone</label>
+          <input type="text" name="owner_phone" placeholder="optional">
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Platform Credentials -->
+    <div class="card">
+      <h2>Platform Credentials</h2>
+      <div class="field required">
+        <label>GHL API Token</label>
+        <input type="text" name="ghl_token" placeholder="pit-xxxx" required>
+      </div>
+      <div class="field">
+        <label>GHL Location ID</label>
+        <input type="text" name="ghl_location_id" placeholder="Leave blank to auto-create">
+      </div>
+      <div class="row">
+        <div class="field required">
+          <label>ClickUp Team ID</label>
+          <input type="text" name="clickup_team_id" placeholder="9017745115" required>
+        </div>
+        <div class="field required">
+          <label>ClickUp API Token</label>
+          <input type="text" name="clickup_token" placeholder="pk_xxxxx" required>
+        </div>
+      </div>
+      <div class="field">
+        <label>Slack Webhook URL</label>
+        <input type="text" name="slack_webhook" placeholder="https://hooks.slack.com/services/... (optional)">
+      </div>
+    </div>
+
+    <!-- Section 3: Operations Config -->
+    <div class="card">
+      <h2>Operations Config</h2>
+      <div class="row-3">
+        <div class="field required">
+          <label>Headcount</label>
+          <input type="number" name="headcount" value="2" required>
+        </div>
+        <div class="field required">
+          <label>Margin Target %</label>
+          <input type="number" name="margin_target" value="40" required>
+        </div>
+        <div class="field required">
+          <label>Labor Cap %</label>
+          <input type="number" name="labor_cap_pct" value="15" required>
+        </div>
+      </div>
+      <div class="field required">
+        <label>Crew Names (JSON)</label>
+        <textarea name="crew_names_json" rows="2" placeholder='{"Crew A":"Marcus","Crew B":"Derek"}' required></textarea>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card" style="padding:20px 32px">
+      <div class="toggle-wrap">
+        <input type="checkbox" id="preflight-toggle" name="preflight_only">
+        <label for="preflight-toggle">Pre-flight check only (no deployment)</label>
+      </div>
+      <button type="submit" class="btn btn-primary" id="submit-btn">
+        Run Pre-Flight & Deploy
+      </button>
+    </div>
+  </form>
+
+  <!-- Spinner -->
+  <div class="spinner" id="spinner">
+    <div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    <p id="spinner-text">Running pre-flight checks...</p>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <div class="card">
+      <h2 id="results-title">Pre-Flight Results</h2>
+      <div class="summary-bar" id="summary-bar"></div>
+      <div id="checks-list"></div>
+    </div>
+    <div class="card" id="manifest-card" style="display:none">
+      <h2>Deployment Manifest</h2>
+      <div id="manifest-content" style="font-family:'DM Mono',monospace;font-size:12px;white-space:pre-wrap;color:#ccc"></div>
+    </div>
+    <button class="btn btn-secondary" onclick="location.reload()">Start New Deployment</button>
+  </div>
+</div>
+
+<script>
+var WEBHOOK_URL = "https://n8n.dakona.net/webhook/rpe-onboard";
+
+var form = document.getElementById("deploy-form");
+var spinner = document.getElementById("spinner");
+var results = document.getElementById("results");
+var submitBtn = document.getElementById("submit-btn");
+var preflightToggle = document.getElementById("preflight-toggle");
+
+preflightToggle.addEventListener("change", function() {
+  submitBtn.textContent = this.checked
+    ? "Run Pre-Flight Checks"
+    : "Run Pre-Flight & Deploy";
+});
+
+form.addEventListener("submit", function(e) {
+  e.preventDefault();
+
+  var fd = new FormData(form);
+  var payload = {
+    client_name: fd.get("client_name"),
+    client_slug: fd.get("client_slug").toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+    owner_name: fd.get("owner_name"),
+    owner_email: fd.get("owner_email"),
+    owner_phone: fd.get("owner_phone") || "",
+    ghl_token: fd.get("ghl_token"),
+    ghl_location_id: fd.get("ghl_location_id") || "",
+    clickup_team_id: fd.get("clickup_team_id"),
+    clickup_token: fd.get("clickup_token"),
+    slack_webhook: fd.get("slack_webhook") || "",
+    headcount: parseInt(fd.get("headcount")) || 2,
+    margin_target: parseInt(fd.get("margin_target")) || 40,
+    labor_cap_pct: parseInt(fd.get("labor_cap_pct")) || 15,
+    crew_names_json: fd.get("crew_names_json"),
+    preflight_only: preflightToggle.checked
+  };
+
+  // Validate crew JSON
+  try {
+    JSON.parse(payload.crew_names_json);
+  } catch(err) {
+    alert("Invalid Crew Names JSON. Use format: {\"Crew A\":\"Name\"}");
+    return;
+  }
+
+  form.style.display = "none";
+  spinner.style.display = "block";
+  document.getElementById("spinner-text").textContent = payload.preflight_only
+    ? "Running pre-flight checks..."
+    : "Deploying client stack...";
+
+  fetch(WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    spinner.style.display = "none";
+    results.style.display = "block";
+    renderResults(data);
+  })
+  .catch(function(err) {
+    spinner.style.display = "none";
+    results.style.display = "block";
+    document.getElementById("results-title").textContent = "Error";
+    document.getElementById("checks-list").innerHTML =
+      '<div class="check-item fail"><span class="check-icon">X</span>' + err.message + '</div>';
+  });
+});
+
+function renderResults(data) {
+  var title = document.getElementById("results-title");
+  var summaryBar = document.getElementById("summary-bar");
+  var checksList = document.getElementById("checks-list");
+  var manifestCard = document.getElementById("manifest-card");
+  var manifestContent = document.getElementById("manifest-content");
+
+  // Pre-flight results
+  if (data.preflight) {
+    var pf = data.preflight;
+    title.textContent = pf.all_passed ? "All Checks Passed" : "Pre-Flight Results";
+
+    summaryBar.innerHTML =
+      '<div class="summary-stat pass"><div class="num">' + pf.summary.passed + '</div><div class="lbl">Passed</div></div>' +
+      '<div class="summary-stat fail"><div class="num">' + pf.summary.failed + '</div><div class="lbl">Failed</div></div>' +
+      '<div class="summary-stat skip"><div class="num">' + pf.summary.skipped + '</div><div class="lbl">Skipped</div></div>';
+
+    var html = "";
+    pf.checks.forEach(function(c) {
+      var cls = c.status.toLowerCase();
+      var icon = c.status === "PASS" ? "&#10003;" : c.status === "FAIL" ? "&#10007;" : "&#8212;";
+      html += '<div class="check-item ' + cls + '"><span class="check-icon">' + icon + '</span><strong>' + c.platform + ':</strong>&nbsp;' + c.message + '</div>';
+    });
+    checksList.innerHTML = html;
+  }
+
+  // Deployment manifest
+  if (data.manifest) {
+    manifestCard.style.display = "block";
+    var m = data.manifest;
+    var lines = [];
+    lines.push("Status: " + m.status);
+    lines.push("Deployed: " + m.deployed_at);
+    lines.push("");
+    lines.push("--- URLs ---");
+    if (m.urls) {
+      Object.entries(m.urls).forEach(function(kv) {
+        lines.push(kv[0] + ": " + kv[1]);
+      });
+    }
+    lines.push("");
+    lines.push("--- Workflows ---");
+    (m.n8n_workflows || []).forEach(function(w) {
+      lines.push((w.active ? "[ON] " : "[OFF] ") + w.name);
+    });
+    if (m.errors && m.errors.length > 0) {
+      lines.push("");
+      lines.push("--- Issues ---");
+      m.errors.forEach(function(e) { lines.push("! " + e); });
+    }
+    if (m.manual_steps) {
+      lines.push("");
+      lines.push("--- Manual Steps ---");
+      m.manual_steps.forEach(function(s, i) { lines.push((i+1) + ". " + s); });
+    }
+    manifestContent.textContent = lines.join("\n");
+  }
+
+  // Pre-flight only report (no manifest)
+  if (data.preflight_report && !data.manifest) {
+    title.textContent = data.all_passed ? "All Checks Passed — Safe to Deploy" : "Pre-Flight Issues Found";
+  }
+}
+</script>
+</body>
+</html>
