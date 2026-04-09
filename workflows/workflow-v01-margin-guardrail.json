@@ -1,0 +1,51 @@
+{
+  "name": "{{client_name}} - v01 Margin Guardrail",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "{{slug}}-v01",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "{{slug}}-v01"
+    },
+    {
+      "parameters": {
+        "jsCode": "const https = require('https');\nconst urlMod = require('url');\nfunction httpReq(method, rawUrl, headers, postBody) {\n  return new Promise((resolve, reject) => {\n    const parsed = urlMod.parse(rawUrl);\n    const opts = { hostname: parsed.hostname, path: parsed.path, method: method, headers: headers || {} };\n    const req = https.request(opts, (res) => {\n      let body = '';\n      res.on('data', c => body += c);\n      res.on('end', () => {\n        let json = null;\n        try { json = JSON.parse(body); } catch(e) {}\n        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, json: json, text: body });\n      });\n    });\n    req.on('error', reject);\n    if (postBody) req.write(typeof postBody === 'string' ? postBody : JSON.stringify(postBody));\n    req.end();\n  });\n}\n\n// Margin Guardrail: checks if opportunity margin >= target\nconst GHL_TOKEN = '{{ghl_token}}';\nconst LOCATION_ID = '{{ghl_location_id}}';\nconst MARGIN_FIELD = '{{ghl_cf_gross_margin_pct}}';\nconst MARGIN_TARGET = {{margin_target}};\nconst BASE = 'https://services.leadconnectorhq.com';\nconst HEADERS = {\n  'Authorization': `Bearer ${GHL_TOKEN}`,\n  'Version': '2021-07-28',\n  'Content-Type': 'application/json'\n};\n\nconst body = $input.first().json;\nconst oppId = body.opportunity_id || body.id;\n\nif (!oppId) return [{ json: { status: 'error', message: 'No opportunity ID provided' } }];\n\n// Fetch opportunity\nconst resp = await httpReq('GET', `${BASE}/opportunities/${oppId}`, HEADERS );\nconst opp = await resp.json;\n\n// Find margin field\nconst marginField = (opp.customFields || []).find(f => f.id === MARGIN_FIELD);\nconst margin = parseFloat(marginField?.value) || 0;\n\nif (margin < MARGIN_TARGET) {\n  return [{ json: {\n    status: 'flagged',\n    opportunity_id: oppId,\n    name: opp.name,\n    margin: margin,\n    target: MARGIN_TARGET,\n    message: `Margin ${margin}% is below ${MARGIN_TARGET}% target`\n  }}];\n}\n\nreturn [{ json: { status: 'ok', opportunity_id: oppId, margin, target: MARGIN_TARGET } }];\n"
+      },
+      "id": "check-margin",
+      "name": "Check Margin",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check Margin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionTimeout": 30
+  }
+}

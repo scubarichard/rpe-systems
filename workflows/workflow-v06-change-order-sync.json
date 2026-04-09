@@ -1,0 +1,51 @@
+{
+  "name": "{{client_name}} - v06 Change Order Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "{{slug}}-v06",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "{{slug}}-v06"
+    },
+    {
+      "parameters": {
+        "jsCode": "const https = require('https');\nconst urlMod = require('url');\nfunction httpReq(method, rawUrl, headers, postBody) {\n  return new Promise((resolve, reject) => {\n    const parsed = urlMod.parse(rawUrl);\n    const opts = { hostname: parsed.hostname, path: parsed.path, method: method, headers: headers || {} };\n    const req = https.request(opts, (res) => {\n      let body = '';\n      res.on('data', c => body += c);\n      res.on('end', () => {\n        let json = null;\n        try { json = JSON.parse(body); } catch(e) {}\n        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, json: json, text: body });\n      });\n    });\n    req.on('error', reject);\n    if (postBody) req.write(typeof postBody === 'string' ? postBody : JSON.stringify(postBody));\n    req.end();\n  });\n}\n\n// Change Order Sync: syncs CO from GHL to ClickUp\nconst GHL_TOKEN = '{{ghl_token}}';\nconst CLICKUP_TOKEN = '{{clickup_token}}';\nconst CO_LIST_ID = '{{clickup_list_pending_cos}}';\nconst GHL_BASE = 'https://services.leadconnectorhq.com';\nconst CU_BASE = 'https://api.clickup.com/api/v2';\nconst GHL_HEADERS = { 'Authorization': `Bearer ${GHL_TOKEN}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };\nconst CU_HEADERS = { 'Authorization': CLICKUP_TOKEN, 'Content-Type': 'application/json' };\n\nconst body = $input.first().json;\nconst oppId = body.opportunity_id || body.id;\nconst coAmount = body.change_order_amount || 0;\nconst coReason = body.reason || 'No reason provided';\n\nif (!oppId) return [{ json: { status: 'error', message: 'No opportunity ID' } }];\n\n// Get opportunity name\nconst resp = await httpReq('GET', `${GHL_BASE}/opportunities/${oppId}`, GHL_HEADERS );\nconst opp = await resp.json;\n\n// Create CO task in ClickUp\nconst task = await fetch(`${CU_BASE}/list/${CO_LIST_ID}/task`, {\n  method: 'POST',\n  headers: CU_HEADERS,\n  body: JSON.stringify({\n    name: `CO: ${opp.name || oppId} — $${coAmount}`,\n    description: `**Change Order**\\nOpportunity: ${opp.name}\\nAmount: $${coAmount}\\nReason: ${coReason}\\nGHL ID: ${oppId}`,\n    status: 'Open',\n    priority: 2\n  })\n});\nconst taskData = await task.json;\n\n// Add note to GHL opportunity\nawait fetch(`${GHL_BASE}/opportunities/${oppId}/notes`, {\n  method: 'POST',\n  headers: GHL_HEADERS,\n  body: JSON.stringify({ body: `Change Order: $${coAmount} — ${coReason}. ClickUp task: ${taskData.id}` })\n});\n\nreturn [{ json: { status: 'ok', opportunity_id: oppId, co_amount: coAmount, clickup_task_id: taskData.id } }];\n"
+      },
+      "id": "sync-co",
+      "name": "Sync Change Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Sync Change Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionTimeout": 30
+  }
+}

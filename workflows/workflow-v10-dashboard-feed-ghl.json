@@ -1,0 +1,51 @@
+{
+  "name": "{{client_name}} - v10 Dashboard Feed GHL",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "{{slug}}-v10",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "{{slug}}-v10"
+    },
+    {
+      "parameters": {
+        "jsCode": "const https = require('https');\nconst urlMod = require('url');\nfunction httpReq(method, rawUrl, headers, postBody) {\n  return new Promise((resolve, reject) => {\n    const parsed = urlMod.parse(rawUrl);\n    const opts = { hostname: parsed.hostname, path: parsed.path, method: method, headers: headers || {} };\n    const req = https.request(opts, (res) => {\n      let body = '';\n      res.on('data', c => body += c);\n      res.on('end', () => {\n        let json = null;\n        try { json = JSON.parse(body); } catch(e) {}\n        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, json: json, text: body });\n      });\n    });\n    req.on('error', reject);\n    if (postBody) req.write(typeof postBody === 'string' ? postBody : JSON.stringify(postBody));\n    req.end();\n  });\n}\n\n// Dashboard Feed GHL: on-demand fetch of GHL data (same as v09 but webhook-triggered)\nconst GHL_TOKEN = '{{ghl_token}}';\nconst LOCATION_ID = '{{ghl_location_id}}';\nconst BASE = 'https://services.leadconnectorhq.com';\nconst HEADERS = { 'Authorization': `Bearer ${GHL_TOKEN}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };\n\nconst FIELD_IDS = {\n  labor_budget: '{{ghl_cf_labor_budget}}',\n  crew_payout: '{{ghl_cf_crew_payout}}',\n  gross_margin_pct: '{{ghl_cf_gross_margin_pct}}',\n  crew: '{{ghl_cf_crew}}'\n};\n\nlet allOpps = [];\nlet hasMore = true;\nlet startAfter = '';\nwhile (hasMore) {\n  const params = `?location_id=${LOCATION_ID}&limit=100${startAfter ? '&startAfter=' + startAfter : ''}`;\n  const resp = await httpReq('GET', `${BASE}/opportunities/search${params}`, HEADERS );\n  const data = await resp.json;\n  if (!resp.ok || !data.opportunities?.length) { hasMore = false; break; }\n  allOpps = allOpps.concat(data.opportunities);\n  if (data.meta?.startAfter) startAfter = data.meta.startAfter;\n  else hasMore = false;\n  if (data.opportunities.length < 100) hasMore = false;\n}\n\nconst jobs = allOpps.map(opp => {\n  const cf = opp.customFields || [];\n  const getField = (key) => (cf.find(x => x.id === FIELD_IDS[key]))?.value || '';\n  return {\n    id: opp.id, name: opp.name || '', client: opp.contact?.name || '',\n    status: opp.status || 'open', value: parseFloat(opp.monetaryValue) || 0,\n    margin: parseFloat(getField('gross_margin_pct')) || 0,\n    labor_cost: parseFloat(getField('crew_payout')) || 0,\n    crew: getField('crew'),\n    date_created: opp.dateAdded || '', last_updated: opp.dateUpdated || ''\n  };\n});\n\nreturn [{ json: { jobs, count: jobs.length, updated: new Date().toISOString() } }];\n"
+      },
+      "id": "fetch-data",
+      "name": "Fetch GHL Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch GHL Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionTimeout": 60
+  }
+}

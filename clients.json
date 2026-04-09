@@ -1,0 +1,11 @@
+{
+  "aj-flooring": {
+    "name": "AJ Flooring Solutions",
+    "path": "clients/aj-flooring",
+    "contact": "Carey Hunter",
+    "status": "active",
+    "ghl_location": true,
+    "n8n_workflows": true,
+    "dashboard": true
+  }
+}

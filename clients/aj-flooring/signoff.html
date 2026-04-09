@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<title>Job Sign-Off | RPE Systems</title>
+<style>
+:root{--bg:#f4f4f4;--surface:#fff;--border:#e0e0e0;--gold:#C2A04A;--text:#1a1a1a;--muted:#888;--green:#2a7a4a;--red:#c0392b;--orange:#c07a2a;--green-bg:rgba(42,122,74,0.08);--red-bg:rgba(192,57,43,0.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min-height:100vh}
+
+.header{background:#fff;border-bottom:3px solid var(--gold);padding:14px 20px;text-align:center}
+.header-brand{font-size:14px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase}
+.header-sub{font-size:9px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-family:"DM Mono",monospace;margin-top:2px}
+
+.form-wrap{max-width:480px;margin:16px auto;padding:0 12px}
+
+.job-banner{background:#fff;border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:8px;padding:14px 16px;margin-bottom:16px}
+.job-name{font-size:16px;font-weight:700;color:var(--text)}
+.job-meta{font-size:11px;color:var(--muted);font-family:"DM Mono",monospace;margin-top:4px}
+
+.section{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px}
+.section-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;font-family:"DM Mono",monospace}
+
+/* Photo upload */
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:24px 16px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--gold);background:rgba(194,160,74,0.04)}
+.upload-icon{font-size:32px;margin-bottom:6px}
+.upload-text{font-size:13px;color:var(--muted)}
+.upload-hint{font-size:10px;color:var(--muted);font-family:"DM Mono",monospace;margin-top:4px}
+.upload-input{display:none}
+.preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.preview-thumb{position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+.preview-thumb img{width:100%;height:100%;object-fit:cover}
+.preview-remove{position:absolute;top:4px;right:4px;width:20px;height:20px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* Checklist */
+.check-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.check-item:last-child{border-bottom:none}
+.check-item input[type="checkbox"]{width:20px;height:20px;accent-color:var(--gold);flex-shrink:0}
+.check-label{font-size:13px;font-weight:500}
+.check-sub{font-size:10px;color:var(--muted);font-family:"DM Mono",monospace}
+
+/* Signature */
+.sig-canvas{width:100%;height:120px;border:1px solid var(--border);border-radius:6px;background:#fafaf8;cursor:crosshair;touch-action:none}
+.sig-actions{display:flex;justify-content:flex-end;margin-top:6px}
+.sig-clear{font-size:10px;color:var(--muted);font-family:"DM Mono",monospace;background:none;border:none;cursor:pointer;text-decoration:underline}
+
+/* Notes */
+.notes-input{width:100%;border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-family:"DM Sans",sans-serif;font-size:13px;resize:vertical;min-height:60px;background:#fafaf8}
+.notes-input:focus{outline:none;border-color:var(--gold)}
+
+/* Go-back flag */
+.goback-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--red-bg);border-radius:6px;margin-top:8px}
+.goback-row input{width:18px;height:18px;accent-color:var(--red)}
+.goback-label{font-size:12px;font-weight:600;color:var(--red)}
+
+/* Submit */
+.submit-btn{width:100%;padding:14px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-family:"DM Sans",sans-serif;cursor:pointer;margin-top:4px;transition:opacity .2s}
+.submit-btn:disabled{opacity:0.5;cursor:not-allowed}
+.submit-btn:hover:not(:disabled){opacity:0.9}
+
+/* Status states */
+.status-msg{text-align:center;padding:40px 20px}
+.status-icon{font-size:48px;margin-bottom:12px}
+.status-title{font-size:18px;font-weight:700;margin-bottom:6px}
+.status-sub{font-size:12px;color:var(--muted);font-family:"DM Mono",monospace}
+
+.footer{text-align:center;padding:16px;font-size:9px;color:var(--muted);font-family:"DM Mono",monospace;letter-spacing:.08em}
+
+/* Validation pulse */
+@keyframes pulse-red{0%,100%{border-color:var(--red)}50%{border-color:transparent}}
+.invalid{animation:pulse-red 0.6s ease 2}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">RPE Systems</div>
+  <div class="header-sub">Job Completion Sign-Off</div>
+</div>
+
+<div class="form-wrap" id="form-wrap">
+
+  <!-- Job Info Banner -->
+  <div class="job-banner">
+    <div class="job-name" id="job-name">Loading...</div>
+    <div class="job-meta" id="job-meta"></div>
+  </div>
+
+  <!-- Photos -->
+  <div class="section">
+    <div class="section-title">Completion Photos</div>
+    <div class="upload-zone" id="upload-zone">
+      <div class="upload-icon">&#x1F4F7;</div>
+      <div class="upload-text">Tap to take or upload photos</div>
+      <div class="upload-hint">Minimum 2 photos required</div>
+    </div>
+    <input type="file" class="upload-input" id="photo-input" accept="image/*" multiple capture="environment">
+    <div class="preview-grid" id="preview-grid"></div>
+  </div>
+
+  <!-- Checklist -->
+  <div class="section">
+    <div class="section-title">Completion Checklist</div>
+    <div class="check-item">
+      <input type="checkbox" id="chk-clean">
+      <div>
+        <div class="check-label">Work area cleaned</div>
+        <div class="check-sub">All debris, dust, and materials removed</div>
+      </div>
+    </div>
+    <div class="check-item">
+      <input type="checkbox" id="chk-walk">
+      <div>
+        <div class="check-label">Customer walkthrough completed</div>
+        <div class="check-sub">Walked job with customer, explained care instructions</div>
+      </div>
+    </div>
+    <div class="check-item">
+      <input type="checkbox" id="chk-damage">
+      <div>
+        <div class="check-label">No damage reported</div>
+        <div class="check-sub">Walls, trim, fixtures inspected — no issues</div>
+      </div>
+    </div>
+    <div class="check-item">
+      <input type="checkbox" id="chk-materials">
+      <div>
+        <div class="check-label">Leftover materials accounted for</div>
+        <div class="check-sub">Extra material returned or noted for customer</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signature -->
+  <div class="section">
+    <div class="section-title">Crew Lead Signature</div>
+    <canvas class="sig-canvas" id="sig-canvas"></canvas>
+    <div class="sig-actions">
+      <button class="sig-clear" id="sig-clear">Clear signature</button>
+    </div>
+  </div>
+
+  <!-- Notes + Go-Back -->
+  <div class="section">
+    <div class="section-title">Notes</div>
+    <textarea class="notes-input" id="notes" placeholder="Any issues, observations, or follow-ups..."></textarea>
+    <div class="goback-row">
+      <input type="checkbox" id="chk-goback">
+      <div class="goback-label">This job requires a return trip</div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <button class="submit-btn" id="submit-btn" onclick="submitForm()">Submit Sign-Off</button>
+</div>
+
+<!-- Success state -->
+<div class="status-msg" id="success-state" style="display:none">
+  <div class="status-icon">&#x2705;</div>
+  <div class="status-title">Sign-Off Complete</div>
+  <div class="status-sub" id="success-sub">Photos and checklist submitted</div>
+</div>
+
+<!-- Error / missing params -->
+<div class="status-msg" id="error-state" style="display:none">
+  <div class="status-icon">&#x26A0;</div>
+  <div class="status-title">Invalid Link</div>
+  <div class="status-sub">This sign-off link is missing job information.<br>Contact your GM for a new link.</div>
+</div>
+
+<div class="footer">RPE Systems &mdash; Flooring Operations Engine</div>
+
+<script>
+// ── URL Params ──
+var params = new URLSearchParams(location.search);
+var oppId = params.get("opp_id");
+var jobName = params.get("job") || "";
+var crew = params.get("crew") || "";
+var contact = params.get("contact") || "";
+
+if (!oppId) {
+  document.getElementById("form-wrap").style.display = "none";
+  document.getElementById("error-state").style.display = "block";
+} else {
+  document.getElementById("job-name").textContent = decodeURIComponent(jobName);
+  var metaParts = [];
+  if (crew) metaParts.push(decodeURIComponent(crew));
+  if (contact) metaParts.push(decodeURIComponent(contact));
+  document.getElementById("job-meta").textContent = metaParts.join(" \u2014 ");
+}
+
+// ── Photo Upload ──
+var photos = [];
+var zone = document.getElementById("upload-zone");
+var input = document.getElementById("photo-input");
+var grid = document.getElementById("preview-grid");
+
+zone.addEventListener("click", function(){ input.click(); });
+zone.addEventListener("dragover", function(e){ e.preventDefault(); zone.classList.add("dragover"); });
+zone.addEventListener("dragleave", function(){ zone.classList.remove("dragover"); });
+zone.addEventListener("drop", function(e){ e.preventDefault(); zone.classList.remove("dragover"); addFiles(e.dataTransfer.files); });
+input.addEventListener("change", function(){ addFiles(input.files); input.value=""; });
+
+function addFiles(files) {
+  for (var i = 0; i < files.length; i++) {
+    if (files[i].type.startsWith("image/")) photos.push(files[i]);
+  }
+  renderPreviews();
+}
+function removePhoto(idx) {
+  photos.splice(idx, 1);
+  renderPreviews();
+}
+function renderPreviews() {
+  grid.innerHTML = "";
+  photos.forEach(function(file, i) {
+    var div = document.createElement("div");
+    div.className = "preview-thumb";
+    var img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    var btn = document.createElement("button");
+    btn.className = "preview-remove";
+    btn.textContent = "\u00D7";
+    btn.onclick = function(){ removePhoto(i); };
+    div.appendChild(img);
+    div.appendChild(btn);
+    grid.appendChild(div);
+  });
+  if (photos.length > 0) {
+    zone.querySelector(".upload-text").textContent = photos.length + " photo" + (photos.length > 1 ? "s" : "") + " selected";
+  } else {
+    zone.querySelector(".upload-text").textContent = "Tap to take or upload photos";
+  }
+}
+
+// ── Signature Pad ──
+var canvas = document.getElementById("sig-canvas");
+var ctx = canvas.getContext("2d");
+var signing = false;
+var hasSig = false;
+
+function resizeCanvas() {
+  var rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = rect.height * 2;
+  ctx.scale(2, 2);
+  ctx.strokeStyle = "#1a1a1a";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+}
+resizeCanvas();
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}
+canvas.addEventListener("mousedown", function(e){ signing=true; ctx.beginPath(); var p=getPos(e); ctx.moveTo(p.x,p.y); });
+canvas.addEventListener("mousemove", function(e){ if(!signing) return; var p=getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasSig=true; });
+canvas.addEventListener("mouseup", function(){ signing=false; });
+canvas.addEventListener("touchstart", function(e){ e.preventDefault(); signing=true; ctx.beginPath(); var p=getPos(e); ctx.moveTo(p.x,p.y); }, {passive:false});
+canvas.addEventListener("touchmove", function(e){ e.preventDefault(); if(!signing) return; var p=getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasSig=true; }, {passive:false});
+canvas.addEventListener("touchend", function(){ signing=false; });
+
+document.getElementById("sig-clear").addEventListener("click", function(){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hasSig = false;
+});
+
+// ── Validation + Submit ──
+function submitForm() {
+  // Validate
+  var errors = [];
+  if (photos.length < 2) {
+    errors.push("upload-zone");
+  }
+  var checks = ["chk-clean","chk-walk","chk-damage","chk-materials"];
+  var allChecked = checks.every(function(id){ return document.getElementById(id).checked; });
+  if (!allChecked) errors.push("chk-clean");
+  if (!hasSig) errors.push("sig-canvas");
+
+  if (errors.length > 0) {
+    var el = document.getElementById(errors[0]);
+    el.classList.add("invalid");
+    el.scrollIntoView({behavior:"smooth", block:"center"});
+    setTimeout(function(){ el.classList.remove("invalid"); }, 1500);
+    return;
+  }
+
+  var btn = document.getElementById("submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Submitting...";
+
+  // Build FormData for n8n webhook
+  var fd = new FormData();
+  fd.append("opp_id", oppId);
+  fd.append("job_name", decodeURIComponent(jobName));
+  fd.append("crew", decodeURIComponent(crew));
+  fd.append("contact", decodeURIComponent(contact));
+  fd.append("signature", canvas.toDataURL("image/png"));
+  fd.append("notes", document.getElementById("notes").value);
+  fd.append("goback", document.getElementById("chk-goback").checked ? "yes" : "no");
+  fd.append("checklist_clean", document.getElementById("chk-clean").checked);
+  fd.append("checklist_walkthrough", document.getElementById("chk-walk").checked);
+  fd.append("checklist_no_damage", document.getElementById("chk-damage").checked);
+  fd.append("checklist_materials", document.getElementById("chk-materials").checked);
+  fd.append("submitted_at", new Date().toISOString());
+  photos.forEach(function(file, i) {
+    fd.append("photo_" + i, file, file.name);
+  });
+
+  // POST to n8n webhook (replace URL when workflow is created)
+  var webhookUrl = "https://n8n.dakona.net/webhook/aj-flooring-signoff";
+
+  fetch(webhookUrl, { method: "POST", body: fd })
+    .then(function(r) {
+      if (r.ok) {
+        document.getElementById("form-wrap").style.display = "none";
+        document.getElementById("success-state").style.display = "block";
+        document.getElementById("success-sub").textContent =
+          photos.length + " photos submitted for " + decodeURIComponent(jobName);
+      } else {
+        throw new Error("Server error");
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.textContent = "Retry Submit";
+      alert("Submission failed. Check your connection and try again.");
+    });
+}
+</script>
+</body>
+</html>

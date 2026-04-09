@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>RPE Dashboard</title>
+<script>
+// Consolidated nav-hiding: check noNav param, embed param, iframe, and referrer
+(function() {
+  var params = new URLSearchParams(location.search);
+  var isEmbed = params.get('noNav')
+    || params.get('embed')
+    || (window.self !== window.top)
+    || document.referrer.includes('gohighlevel.com')
+    || document.referrer.includes('leadconnectorhq.com');
+  if (isEmbed) {
+    document.documentElement.classList.add('embed-mode');
+    var style = document.createElement('style');
+    style.textContent = '.nav { display: none !important; } .dashboard { padding-top: 8px !important; }';
+    document.head.appendChild(style);
+  }
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f4f4f4;
+  --surface: #fff;
+  --border: #e0e0e0;
+  --gold: #C2A04A;
+  --text: #1a1a1a;
+  --muted: #888;
+  --green: #2a7a4a;
+  --red: #c0392b;
+  --orange: #c07a2a;
+  --green-bg: rgba(42,122,74,0.08);
+  --red-bg: rgba(192,57,43,0.08);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+.view.active {
+  min-height: 100vh;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "DM Sans", sans-serif;
+  min-height: 100vh;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 3px solid var(--gold);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-brand {
+  display: flex;
+  flex-direction: column;
+  margin-right: 20px;
+}
+
+.nav-brand-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.nav-brand-sub {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-family: "DM Mono", monospace;
+}
+
+.nav a {
+  padding: 6px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.nav a.active {
+  color: #fff;
+  background: var(--gold);
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+.dashboard {
+  padding: 16px;
+}
+
+/* Sovereign Banner */
+.sovereign-banner {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: .04em;
+  border-bottom: 1px solid transparent;
+}
+
+.sovereign-banner.win {
+  background: rgba(42,122,74,0.12);
+  color: var(--green);
+  border-color: rgba(42,122,74,0.2);
+}
+
+.sovereign-banner.watch {
+  background: rgba(192,122,42,0.1);
+  color: var(--orange);
+  border-color: rgba(192,122,42,0.15);
+}
+
+.sovereign-banner.alert {
+  background: rgba(192,57,43,0.12);
+  color: var(--red);
+  border-color: rgba(192,57,43,0.2);
+}
+
+/* Date Toggles */
+.date-toggle-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.date-toggle-label {
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  margin-right: 4px;
+}
+
+.date-btn {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  letter-spacing: .06em;
+  font-family: "DM Sans", sans-serif;
+}
+
+.date-btn.active {
+  background: var(--gold);
+  color: #fff;
+  border-color: var(--gold);
+}
+
+/* Crew Filter */
+.crew-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+
+.crew-filter-bar label {
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+}
+
+.crew-filter-bar select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: "DM Sans", sans-serif;
+  color: var(--text);
+  background: #fff;
+  cursor: pointer;
+}
+
+.section-header {
+  background: var(--gold);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  margin-top: 16px;
+}
+
+.section-header:first-child {
+  margin-top: 0;
+}
+
+.grid {
+  display: grid;
+  gap: 10px;
+}
+
+.grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.grid-4 {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: box-shadow .15s, transform .1s;
+}
+
+.card:hover {
+  box-shadow: 0 4px 16px rgba(194,160,74,0.2);
+  transform: translateY(-1px);
+}
+
+.card.no-click {
+  cursor: default;
+}
+
+.card.no-click:hover {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  transform: none;
+}
+
+/* Placeholder card */
+.card.placeholder {
+  border: 2px dashed var(--gold);
+  background: rgba(194,160,74,0.02);
+  cursor: default;
+}
+
+.card.placeholder:hover {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  transform: none;
+}
+
+.placeholder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(194,160,74,0.12);
+  color: var(--gold);
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  font-family: "DM Mono", monospace;
+}
+
+.card-label {
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  margin-bottom: 8px;
+}
+
+.card-hint {
+  font-size: 9px;
+  color: var(--gold);
+  font-family: "DM Mono", monospace;
+  margin-bottom: 6px;
+  opacity: .8;
+}
+
+.card-value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -.02em;
+  color: var(--text);
+}
+
+.card-value.gold {
+  color: var(--gold);
+}
+
+.card-value.green {
+  color: var(--green);
+}
+
+.card-value.red {
+  color: var(--red);
+}
+
+.card-value.orange {
+  color: var(--orange);
+}
+
+.card-value.muted {
+  color: var(--muted);
+}
+
+.card-sub {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 5px;
+  font-family: "DM Mono", monospace;
+}
+
+.chart-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.chart-card.placeholder {
+  border: 2px dashed var(--gold);
+  background: rgba(194,160,74,0.02);
+}
+
+.chart-title {
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  margin-bottom: 12px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-row:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: "DM Mono", monospace;
+}
+
+.stat-value.green {
+  color: var(--green);
+}
+
+.stat-value.red {
+  color: var(--red);
+}
+
+.stat-value.orange {
+  color: var(--orange);
+}
+
+.gauge-wrap {
+  margin-top: 10px;
+}
+
+.gauge-bar {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.gauge-fill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+.gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  margin-top: 3px;
+}
+
+.ts {
+  font-size: 9px;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  padding: 12px 0 2px;
+  text-align: right;
+}
+
+/* Red Flag Table / Watchdog Tables */
+.flag-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.flag-table th {
+  text-align: left;
+  padding: 7px 10px;
+  background: #f8f8f8;
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  border-bottom: 2px solid var(--border);
+}
+
+.flag-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.flag-table tr:last-child td {
+  border-bottom: none;
+}
+
+.flag-table tr:hover td {
+  background: #fafaf8;
+}
+
+.flag-table .row-red td {
+  background: var(--red-bg);
+}
+
+.flag-table .row-orange td {
+  background: rgba(192,122,42,0.06);
+}
+
+/* Stall pill */
+.stall-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: "DM Mono", monospace;
+}
+
+.stall-pill.red {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.stall-pill.orange {
+  background: rgba(192,122,42,0.1);
+  color: var(--orange);
+}
+
+.stall-pill.green {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+/* Leaderboard */
+.leaderboard {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.leaderboard th {
+  text-align: left;
+  padding: 7px 10px;
+  background: #f8f8f8;
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  border-bottom: 2px solid var(--border);
+}
+
+.leaderboard td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.leaderboard tr:last-child td {
+  border-bottom: none;
+}
+
+.rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: "DM Mono", monospace;
+}
+
+.rank.gold {
+  background: rgba(194,160,74,0.15);
+  color: var(--gold);
+}
+
+.rank.silver {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.rank.bronze {
+  background: rgba(192,122,42,0.1);
+  color: var(--orange);
+}
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modal-overlay.open {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.modal {
+  background: #fff;
+  width: 480px;
+  height: 100vh;
+  overflow-y: auto;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+  animation: slideIn .2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.modal-header {
+  background: var(--gold);
+  color: #fff;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.modal-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.modal-close {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: rgba(255,255,255,0.35);
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.modal-stat {
+  background: #f8f8f8;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.modal-stat-label {
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  margin-bottom: 4px;
+}
+
+.modal-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.modal-stat-value.gold {
+  color: var(--gold);
+}
+
+.modal-stat-value.green {
+  color: var(--green);
+}
+
+.modal-stat-value.red {
+  color: var(--red);
+}
+
+.modal-stat-value.orange {
+  color: var(--orange);
+}
+
+.job-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.job-table th {
+  text-align: left;
+  padding: 8px 10px;
+  background: #f8f8f8;
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  border-bottom: 2px solid var(--border);
+}
+
+.job-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.job-table tr:last-child td {
+  border-bottom: none;
+}
+
+.job-table tr:hover td {
+  background: #fafaf8;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.badge.green {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.badge.red {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.badge.orange {
+  background: rgba(192,122,42,0.08);
+  color: var(--orange);
+}
+
+.badge.gold {
+  background: rgba(194,160,74,0.1);
+  color: var(--gold);
+}
+</style>
+</head>
+<body>
+
+
+<!-- LOADING STATE -->
+<div id="loading-overlay" style="display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:12px">
+  <div style="font-size:14px;font-weight:600;color:var(--gold);letter-spacing:.06em;text-transform:uppercase">Loading Dashboard...</div>
+  <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">Fetching live data from GHL</div>
+</div>
+
+<!-- SOVEREIGN BANNER -->
+<div id="sovereign-banner" class="sovereign-banner"></div>
+
+<!-- MODAL DRAWER -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Detail</span>
+      <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ CEO VIEW -->
+<div id="view-ceo" class="view">
+<div class="dashboard">
+
+  <!-- Date Toggles -->
+  <div class="date-toggle-bar">
+    <span class="date-toggle-label">Period:</span>
+    <button class="date-btn active" onclick="setDate(this,'today')">Today</button>
+    <button class="date-btn" onclick="setDate(this,'week')">This Week</button>
+    <button class="date-btn" onclick="setDate(this,'ytd')">Year to Date</button>
+  </div>
+
+  <!-- TIER 1: Peace of Mind -->
+  <div class="section-header">Tier 1 &mdash; Peace of Mind</div>
+  <div class="grid grid-4" style="margin-bottom:10px">
+    <div class="card no-click">
+      <div class="card-label">&#x26A1; The Pulse &mdash; Today's Sales</div>
+      <div class="card-value gold" id="ceo-today-sales">$0</div>
+      <div class="card-sub" id="ceo-today-sub">No new jobs added today</div>
+    </div>
+    <div class="card no-click">
+      <div class="card-label">&#x1F4C5; Yesterday's Sales</div>
+      <div class="card-value" id="ceo-yesterday-sales">$0</div>
+      <div class="card-sub" id="ceo-yesterday-sub">No jobs added yesterday</div>
+    </div>
+    <div class="card" onclick="showModal('pipeline')">
+      <div class="card-hint">&#x2197; Click to see all jobs</div>
+      <div class="card-label">Total Pipeline Value</div>
+      <div class="card-value gold">$0</div>
+      <div class="card-sub">All active jobs combined</div>
+    </div>
+    <div class="card" onclick="showModal('netprofit')">
+      <div class="card-hint">&#x2197; Click for profit breakdown</div>
+      <div class="card-label">Net Profit</div>
+      <div class="card-value green">$0</div>
+      <div class="card-sub">After all labor costs</div>
+    </div>
+  </div>
+  <div class="grid grid-2">
+    <div class="chart-card no-click">
+      <div class="chart-title">Weekly Velocity &mdash; Jobs Added by Day (Last 14 Days)</div>
+      <div style="position:relative;height:90px">
+        <canvas id="ceo-velocity-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card no-click">
+      <div class="chart-title">RPE Gauge &mdash; Revenue per Employee <span style="font-size:9px;color:var(--gold);font-family:'DM Mono',monospace">(target: &gt;$40K/mo)</span></div>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:8px">
+        <div style="flex:1">
+          <div id="rpe-gauge-value" style="font-size:28px;font-weight:700;letter-spacing:-.02em"></div>
+          <div id="rpe-gauge-sub" style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:4px"></div>
+          <div class="gauge-wrap" style="margin-top:10px">
+            <div class="gauge-bar" style="height:12px">
+              <div id="rpe-gauge-fill" class="gauge-fill" style="height:100%"></div>
+            </div>
+            <div class="gauge-labels"><span>$0</span><span>$40K</span><span>$80K</span></div>
+          </div>
+        </div>
+        <div style="text-align:center;min-width:80px;padding:8px;background:#f8f8f8;border-radius:8px">
+          <div style="font-size:28px;font-weight:700;color:var(--text)">2</div>
+          <div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px">EMPLOYEES</div>
+          <div style="font-size:8px;color:var(--green);font-family:'DM Mono',monospace;margin-top:4px">&#x2714; Live from GHL</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIER 2: 40/15 Health Monitor -->
+  <div class="section-header">Tier 2 &mdash; 40/15 Health Monitor</div>
+  <div class="grid grid-2" style="margin-bottom:10px">
+    <div class="card" onclick="showModal('margin')">
+      <div class="card-hint">&#x2197; Click to see margins by job</div>
+      <div class="card-label">Avg Gross Margin</div>
+      <div class="card-value green">0.0%</div>
+      <div class="card-sub">Target: 40% minimum</div>
+      <div class="gauge-wrap">
+        <div class="gauge-bar"><div class="gauge-fill" style="width:0%;background:var(--green)"></div></div>
+        <div class="gauge-labels"><span>0%</span><span>40%</span><span>60%</span></div>
+      </div>
+    </div>
+    <div class="card no-click">
+      <div class="card-label">Labor Cap Tracker</div>
+      <div class="card-value" id="ceo-laborcap-val">—</div>
+      <div class="card-sub" id="ceo-laborcap-sub">Target: 15% max of revenue</div>
+      <div class="gauge-wrap">
+        <div class="gauge-bar"><div id="ceo-laborcap-fill" class="gauge-fill" style="width:0%;background:var(--green)"></div></div>
+        <div class="gauge-labels"><span>0%</span><span>15%</span><span>30%</span></div>
+      </div>
+    </div>
+  </div>
+  <!-- Red Flag Table -->
+  <div class="chart-card no-click" style="margin-bottom:0">
+    <div class="chart-title">&#x1F6A9; Red Flag Table &mdash; Top 3 Lowest Margin Jobs</div>
+    <table class="flag-table" id="ceo-redflag-table">
+      <thead><tr><th>Job</th><th>Client</th><th>Contract</th><th>Margin</th><th>Days Idle</th><th>Action</th><th></th></tr></thead>
+      <tbody id="ceo-redflag-body"></tbody>
+    </table>
+  </div>
+
+  <!-- TIER 3: Fulfillment Watchdog -->
+  <div class="section-header">Tier 3 &mdash; Fulfillment Watchdog</div>
+  <div class="grid grid-3" style="margin-bottom:10px">
+    <div class="card" onclick="showModal('open')">
+      <div class="card-hint">&#x2197; See all pipeline jobs</div>
+      <div class="card-label">Pending (Pipeline $)</div>
+      <div class="card-value gold" id="ceo-pending-val">$0</div>
+      <div class="card-sub" id="ceo-pending-sub">9 active jobs</div>
+    </div>
+    <div class="card" onclick="showModal('won')">
+      <div class="card-hint">&#x2197; See completed jobs</div>
+      <div class="card-label">Completed MTD</div>
+      <div class="card-value green">0</div>
+      <div class="card-sub">Jobs through the Engine</div>
+    </div>
+    <div class="card placeholder no-click">
+      <div class="placeholder-badge">&#x23F3; Awaiting Live Data</div>
+      <div class="card-label">&#x1F4F7; Photo Gate Alert</div>
+      <div class="card-value muted" style="font-size:24px">&#8212; &#8212;</div>
+      <div class="card-sub">Jobs finished, no photos — needs ClickUp</div>
+    </div>
+  </div>
+  <div class="chart-card no-click">
+    <div class="chart-title">Margin % vs Contract Value &mdash; <span style="color:var(--red)">&#9679;</span> Below 40% &nbsp; <span style="color:var(--green)">&#9679;</span> At/Above 40%</div>
+    <div style="position:relative;height:200px">
+      <canvas id="ceo-margin-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="ts">Updated daily at 11:10 AM ET</div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ GM VIEW -->
+<div id="view-gm" class="view">
+<div class="dashboard">
+
+  <!-- Crew Filter -->
+  <div class="crew-filter-bar">
+    <label>Filter by Crew:</label>
+    <select id="crew-filter" onchange="filterByCrew(this.value)">
+      <option value="all">All Crews</option>
+      <option value="Crew A">Crew A &mdash; Marcus</option>
+      <option value="Crew B">Crew B &mdash; Derek</option>
+      <option value="Crew C">Crew C &mdash; Steve</option>
+    </select>
+    <span id="crew-filter-count" style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-left:8px"></span>
+  </div>
+
+  <!-- TIER 1: Daily Production Pulse -->
+  <div class="section-header">Tier 1 &mdash; Daily Production Pulse</div>
+  <div class="grid grid-3">
+    <div class="card no-click">
+      <div class="card-label">&#x1F3E0; Jobs Starting Today</div>
+      <div id="gm-starting-today"></div>
+    </div>
+    <div class="card no-click" onclick="showModal('stuck')">
+      <div class="card-hint">&#x2197; See stuck jobs</div>
+      <div class="card-label">Pipeline Bottleneck Alert</div>
+      <div class="card-value orange" style="font-size:22px">New Lead</div>
+      <div class="card-sub">8 of 9 jobs stuck here</div>
+      <div style="margin-top:10px;font-size:11px;color:var(--orange);font-family:'DM Mono',monospace">&#x26A0; Highest stall point</div>
+    </div>
+    <div class="card placeholder no-click">
+      <div class="placeholder-badge">&#x23F3; Awaiting Live Data</div>
+      <div class="card-label">Daily Sales vs Store Goal</div>
+      <div class="card-value muted" style="font-size:24px">&#8212; &#8212;</div>
+      <div class="card-sub">Needs GHL daily sales target</div>
+    </div>
+  </div>
+
+  <!-- TIER 2: 40/15 Guardrail Monitor -->
+  <div class="section-header">Tier 2 &mdash; 40/15 Guardrail Monitor</div>
+
+  <!-- Labor Cap Watchdog -->
+  <div class="chart-card no-click" style="margin-bottom:10px">
+    <div class="chart-title">&#x1F6A7; Labor Cap Watchdog &mdash; 15% Max per Job <span style="color:var(--orange)">(yellow = approaching)</span> <span style="color:var(--red)">(red = over)</span></div>
+    <table class="flag-table" id="gm-labor-table">
+      <thead><tr><th>Job</th><th>Crew</th><th>Contract</th><th>Labor Budget</th><th>Labor Cost</th><th>Labor %</th><th>Status</th><th></th></tr></thead>
+      <tbody id="gm-labor-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Margin Alert Table -->
+  <div class="chart-card no-click" style="margin-bottom:10px">
+    <div class="chart-title">&#x1F4CA; Margin Alert Table &mdash; Jobs Projected Below 40%</div>
+    <table class="flag-table" id="gm-margin-table">
+      <thead><tr><th>Job</th><th>Crew</th><th>Contract</th><th>Margin</th><th>Days Idle</th><th>Alert</th><th></th></tr></thead>
+      <tbody id="gm-margin-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Change Order Log -->
+  <div class="chart-card no-click" style="margin-bottom:0">
+    <div class="chart-title">&#x1F4CB; Change Order Log &mdash; Scope Creep Tracker <span style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;margin-left:8px">Source: ClickUp &rarr; syncs every 6hrs</span></div>
+    <table class="flag-table" id="gm-co-table">
+      <thead>
+        <tr>
+          <th>Job</th>
+          <th>Change Order</th>
+          <th>Contract Value</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>ClickUp</th>
+        </tr>
+      </thead>
+      <tbody id="gm-co-body"></tbody>
+    </table>
+  </div>
+
+  <!-- TIER 3: Installer Accountability Gate -->
+  <div class="section-header">Tier 3 &mdash; Installer Accountability Gate</div>
+  <div class="grid grid-3">
+    <div class="card placeholder no-click">
+      <div class="placeholder-badge">&#x23F3; Awaiting Live Data</div>
+      <div class="card-label">&#x1F4F7; Missing Photo Tracker</div>
+      <div class="card-value muted" style="font-size:14px;letter-spacing:.08em">AWAITING LIVE DATA</div>
+      <div class="card-sub">Jobs marked complete, no photos — needs ClickUp</div>
+    </div>
+    <div class="card placeholder no-click">
+      <div class="placeholder-badge">&#x23F3; Awaiting Live Data</div>
+      <div class="card-label">&#x270F; Sign-Off Completion Rate</div>
+      <div class="card-value muted" style="font-size:14px;letter-spacing:.08em">AWAITING LIVE DATA</div>
+      <div class="card-sub">% jobs with digital customer sign-off</div>
+    </div>
+    <div class="card placeholder no-click">
+      <div class="placeholder-badge">&#x23F3; Awaiting Live Data</div>
+      <div class="card-label">&#x1F504; Return-Trip / Go-Back Log</div>
+      <div class="card-value muted" style="font-size:14px;letter-spacing:.08em">AWAITING LIVE DATA</div>
+      <div class="card-sub">Jobs requiring a second trip (kills 15% target)</div>
+    </div>
+  </div>
+
+  <!-- Team Leaderboard + Product Winner -->
+  <div class="grid grid-2" style="margin-top:10px">
+    <div class="chart-card no-click">
+      <div class="chart-title">&#x1F3C6; Team Leaderboard &mdash; Sales Architect Margin Performance</div>
+      <table class="leaderboard" id="gm-leaderboard"></table>
+    </div>
+    <div class="chart-card no-click">
+      <div class="chart-title">&#x1F3AF; Product Winner Chart &mdash; Margin % by Category</div>
+      <div style="position:relative;height:180px">
+        <canvas id="gm-product-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="ts">Updated daily at 6:10 AM ET</div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ CFO VIEW -->
+<div id="view-cfo" class="view">
+<div class="dashboard">
+  <div class="section-header">Tier 1 &mdash; Financial Pulse</div>
+  <div class="grid grid-2">
+    <div class="card" onclick="showModal('pipeline')">
+      <div class="card-hint">&#x2197; Click to see all jobs</div>
+      <div class="card-label">Total Pipeline Value</div>
+      <div class="card-value gold">$0</div>
+      <div class="card-sub">Active revenue potential</div>
+    </div>
+    <div class="card" onclick="showModal('netprofit')">
+      <div class="card-hint">&#x2197; Click for profit breakdown</div>
+      <div class="card-label">Net Profit</div>
+      <div class="card-value green">$0</div>
+      <div class="card-sub">After all labor costs</div>
+    </div>
+  </div>
+  <div class="section-header">Tier 2 &mdash; Labor and Margin Control</div>
+  <div class="grid grid-2">
+    <div class="chart-card no-click">
+      <div class="chart-title">Labor Budget vs Cost vs Variance</div>
+      <canvas id="cfo-labor-chart" height="200"></canvas>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="card no-click">
+        <div class="card-label">Labor Budget</div>
+        <div class="card-value" style="font-size:22px">$0</div>
+        <div class="card-sub">—</div>
+      </div>
+      <div class="card no-click">
+        <div class="card-label">Labor Cost</div>
+        <div class="card-value" style="font-size:22px">$0</div>
+        <div class="card-sub">—</div>
+      </div>
+      <div class="card no-click">
+        <div class="card-label">Labor Variance</div>
+        <div class="card-value green" style="font-size:22px">$0</div>
+        <div class="card-sub">—</div>
+      </div>
+      <div class="card" onclick="showModal('margin')">
+        <div class="card-hint">&#x2197; See by job</div>
+        <div class="card-label">Avg Gross Margin</div>
+        <div id="cfo-margin-val" class="card-value green" style="font-size:22px">—</div>
+        <div id="cfo-margin-indicator" class="card-sub">Target: 40%+</div>
+      </div>
+    </div>
+  </div>
+  <div class="section-header">Tier 3 &mdash; Enterprise Value</div>
+  <div class="grid grid-2">
+    <div class="card no-click">
+      <div class="card-label">Enterprise Value 3x</div>
+      <div class="card-value gold">$0</div>
+      <div class="card-sub">Conservative multiple</div>
+    </div>
+    <div class="card no-click">
+      <div class="card-label">Enterprise Value 5x</div>
+      <div class="card-value gold">$0</div>
+      <div class="card-sub">Growth multiple</div>
+    </div>
+    <p style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;font-style:italic;text-align:center;padding:6px 0 0;grid-column:1/-1">Based on current pipeline snapshot. Full LTM calculation available after 12 months of data.</p>
+  </div>
+  <div class="ts">Updated daily at 6:10 AM ET</div>
+</div>
+</div>
+
+<script>
+var JOBS = [
+  {id:"TgqCHz7UnC4JzqIkAMwh",name:"Jones Trophy Room",client:"Chipper Jones",value:31500,labor_budget:4725,labor_cost:6300,margin:45,stage:"won",status:"won",last_updated:"2026-03-23",date_created:"2026-01-26",net_profit:3500,crew:"Crew A",product:"LVP"},
+  {id:"psPkH0gBqYdZ0ZJ3R5lR",name:"Wilkins Game Room",client:"Dominique Wilkins",value:22400,labor_budget:3360,labor_cost:5600,margin:42,stage:"open",status:"open",last_updated:"2026-03-25",date_created:"2026-02-02",net_profit:2800,crew:"Crew A",product:"LVP"},
+  {id:"pBbnH5nM7zfahWqUM43L",name:"Mike Barbershop",client:"Killer Mike",value:8400,labor_budget:1260,labor_cost:2100,margin:40,stage:"open",status:"open",last_updated:"2026-03-25",date_created:"2026-02-09",net_profit:1400,crew:"Crew A",product:"LVP"},
+  {id:"1APhpBaopUfaBMPO0B70",name:"Brown Master Bath",client:"Monica Brown",value:9900,labor_budget:1485,labor_cost:2475,margin:40,stage:"open",status:"open",last_updated:"2026-03-25",date_created:"2026-02-16",net_profit:1100,crew:"Crew A",product:"LVP"},
+  {id:"qMDSMfEulCfow8GxG4YU",name:"Benjamin Recording Studio",client:"Andre Benjamin",value:14400,labor_budget:2160,labor_cost:4320,margin:30,stage:"open",status:"open",last_updated:"2026-03-23",date_created:"2026-02-23",net_profit:1600,crew:"Crew A",product:"LVP"},
+  {id:"vREyxAkQ53WPADGq2Nk4",name:"Foxworthy Whole House",client:"Jeff Foxworthy",value:12600,labor_budget:1890,labor_cost:3150,margin:45,stage:"open",status:"open",last_updated:"2026-03-23",date_created:"2026-03-02",net_profit:2100,crew:"Crew A",product:"LVP"},
+  {id:"Y3RWKZSHYUHMV0IJtMOU",name:"Roberts Kitchen Remodel",client:"Julia Roberts",value:9500,labor_budget:1425,labor_cost:2850,margin:30,stage:"open",status:"open",last_updated:"2026-03-23",date_created:"2026-03-09",net_profit:950,crew:"Crew A",product:"LVP"},
+  {id:"3Q4zNojKGptf4yDXA1sL",name:"Raymond Main Level Refinish",client:"Usher Raymond",value:25600,labor_budget:3840,labor_cost:5760,margin:42,stage:"open",status:"open",last_updated:"2026-03-23",date_created:"2026-03-14",net_profit:3200,crew:"Crew A",product:"LVP"},
+  {id:"JrfnRAysIgcjOQv23XQs",name:"Speed Lead Test",client:"Ludacris Bridges",value:11700,labor_budget:1755,labor_cost:3600,margin:45,stage:"open",status:"open",last_updated:"2026-03-23",date_created:"2026-03-18",net_profit:1800,crew:"Crew A",product:"LVP"},
+  {id:"sNA4UhByrXeJWUtFebOr",name:"Perry Studio Renovation",client:"Tyler Perry",value:8500,labor_budget:1275,labor_cost:1700,margin:42,stage:"won",status:"won",last_updated:"2026-03-23",date_created:"2026-03-22",net_profit:650,crew:"Crew A",product:"LVP"}
+];
+(async function(){
+try {
+
+// ═══════════════════════════════════════════════════════════
+// CONFIGURATION
+// ═══════════════════════════════════════════════════════════
+
+var CONFIG = {
+  API_URL: '{{API_URL}}',
+  GHL_OPP_BASE: '{{GHL_OPP_BASE}}',
+  MS_PER_DAY: 86400000,
+  MARGIN_TARGET: {{MARGIN_TARGET}},
+  MARGIN_WARNING: {{MARGIN_WARNING}},
+  LABOR_CAP_PCT: {{LABOR_CAP_PCT}},
+  LABOR_WARNING_PCT: {{LABOR_WARNING_PCT}},
+  STALL_DAYS_RED: 6,
+  STALL_DAYS_ORANGE: 3,
+  RPE_TARGET: 40000,
+  RPE_WARNING: 25000,
+  RPE_GAUGE_MAX: 80000,
+  HEADCOUNT: {{HEADCOUNT}},
+  RED_FLAG_COUNT: 3,
+  VELOCITY_DAYS: { today: 14, week: 28, ytd: 90 },
+  CREW_NAMES: {{CREW_NAMES}}
+};
+
+// ═══════════════════════════════════════════════════════════
+// DATA & STATE
+// ═══════════════════════════════════════════════════════════
+
+  var r = await fetch(CONFIG.API_URL);
+  var data = await r.json();
+  JOBS = data.jobs || [];
+} catch(e) { console.error("Live data fetch failed:", e); JOBS = []; }
+document.getElementById("loading-overlay").style.display="none";
+
+var TODAY = new Date();
+
+// Active crew filter
+var activeCrew = "all";
+
+// Active date period
+var activePeriod = 'today';
+
+// Chart color aliases
+var gold="#C2A04A",green="#2a7a4a",red="#c0392b",orange="#c07a2a";
+
+// ═══════════════════════════════════════════════════════════
+// UTILITY FUNCTIONS
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Returns how many full days have elapsed since the given date string.
+ * @param {string} d - ISO date string
+ * @returns {number}
+ */
+function daysSince(d){return Math.floor((TODAY-new Date(d))/CONFIG.MS_PER_DAY);}
+
+function fmt(n){return "$"+n.toLocaleString();}
+
+/**
+ * Safe percentage: returns 0 when denominator is zero.
+ * @param {number} a - numerator
+ * @param {number} b - denominator
+ * @returns {number}
+ */
+function pct(a,b){return b === 0 ? 0 : Math.round(a/b*100);}
+
+function ghlLink(id){return "<td><a href='"+CONFIG.GHL_OPP_BASE+id+"?tab=Opportunity+Details' target='_blank' class='badge gold' style='text-decoration:none'>&nearr; GHL</a></td>";}
+
+function filteredJobs(){
+  if(activeCrew==="all") return JOBS;
+  return JOBS.filter(function(j){return j.crew===activeCrew;});
+}
+
+function marginBadge(m){return "<span class='badge "+(m>=CONFIG.MARGIN_TARGET?"green":"red")+"'>"+m+"%</span>";}
+function stageBadge(s){return "<span class='badge gold'>"+s+"</span>";}
+
+/**
+ * Returns a stall color class based on days idle.
+ * @param {number} days - number of days since last update
+ * @returns {string} 'red' | 'orange' | 'green'
+ */
+function stallClass(days) {
+  return days > CONFIG.STALL_DAYS_RED ? 'red' : days > CONFIG.STALL_DAYS_ORANGE ? 'orange' : 'green';
+}
+
+// ═══════════════════════════════════════════════════════════
+// REUSABLE MODAL COLUMN DEFINITIONS
+// ═══════════════════════════════════════════════════════════
+
+var COL = {
+  job: {label:'Job', fn: function(j){ return '<strong>'+j.name+'</strong><br><span style="color:var(--muted);font-size:11px">'+j.client+'</span>'; }},
+  value: {label:'Value', fn: function(j){ return '<strong>'+fmt(j.value)+'</strong>'; }},
+  contract: {label:'Contract', fn: function(j){ return fmt(j.value); }},
+  margin: {label:'Margin', fn: function(j){ return marginBadge(j.margin); }},
+  crew: {label:'Crew', fn: function(j){ return j.crew; }},
+  stage: {label:'Stage', fn: function(j){ return stageBadge(j.stage); }},
+  labor: {label:'Labor', fn: function(j){ return fmt(j.labor_cost); }},
+  netProfit: {label:'Net Profit', fn: function(j){ return fmt(j.net_profit); }},
+  netProfitColored: {label:'Net Profit', fn: function(j){ return '<strong style="color:'+(j.net_profit>0?'var(--green)':'var(--red)')+'">'+fmt(j.net_profit)+'</strong>'; }},
+  daysIdle: {label:'Days Idle', fn: function(j){ return '<strong style="color:var(--orange)">'+daysSince(j.last_updated)+' days</strong>'; }}
+};
+
+// ═══════════════════════════════════════════════════════════
+// VIEW SETUP
+// ═══════════════════════════════════════════════════════════
+
+var view = new URLSearchParams(location.search).get("view")||"ceo";
+var embed = document.documentElement.classList.contains('embed-mode');
+document.getElementById("view-"+view).className="view active";
+var tabEl = document.getElementById("tab-"+view); if(tabEl) tabEl.className="active";
+
+// Nav hidden via CSS class set in <head> — see embed-mode above
+
+// ═══════════════════════════════════════════════════════════
+// SOVEREIGN BANNER
+// ═══════════════════════════════════════════════════════════
+
+(function(){
+  var banner = document.getElementById("sovereign-banner");
+  if(view !== "ceo" && view !== "gm"){ banner.style.display="none"; return; }
+  var totalVal = JOBS.reduce(function(s,j){return s+(j.value||0);},0);
+  var totalLabor = JOBS.reduce(function(s,j){return s+(j.labor_cost||0);},0);
+  var laborCapPct = totalVal > 0 ? (totalLabor/totalVal*100) : 0;
+  var openJobs = JOBS.filter(function(j){return j.status==="open";});
+  var avgM = openJobs.length===0 ? 0 : openJobs.reduce(function(s,j){return s+j.margin;},0)/openJobs.length;
+  var stuck = JOBS.filter(function(j){return j.status==="open"&&daysSince(j.last_updated)>=CONFIG.STALL_DAYS_ORANGE;});
+  if(avgM>=40 && laborCapPct<=15 && stuck.length===0){
+    banner.className="sovereign-banner win";
+    banner.innerHTML="&#x2728; System Optimal: No Action Required";
+  } else if((avgM>=38&&avgM<40)||(laborCapPct>13&&laborCapPct<=15)||(stuck.length>0&&stuck.length<=2)){
+    banner.className="sovereign-banner watch";
+    var w=[];
+    if(avgM<40) w.push("Margin "+avgM.toFixed(1)+"% approaching 40% target");
+    if(laborCapPct>13) w.push("Labor cap "+laborCapPct.toFixed(1)+"% approaching 15% limit");
+    if(stuck.length>0) w.push(stuck.length+" jobs stalling");
+    banner.innerHTML="&#x26A0; Watch Required: "+w.join(" | ");
+  } else {
+    banner.className="sovereign-banner alert";
+    banner.innerHTML="&#x26A0; Attention Required: "+stuck.length+" stuck jobs | Avg margin "+avgM.toFixed(1)+"% — review Tier 2";
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════
+// CEO VIEW — Date Toggles & Metrics
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Switches the active date period and refreshes all CEO metrics.
+ * @param {HTMLElement} btn - the clicked date toggle button
+ * @param {string} period - 'today' | 'week' | 'ytd'
+ */
+function setDate(btn, period) {
+  document.querySelectorAll(".date-btn").forEach(function(b){ b.className = "date-btn"; });
+  btn.className = "date-btn active";
+  activePeriod = period;
+  refreshCEOMetrics();
+  initCFOChart();
+}
+
+function getPeriodJobs(period) {
+  var now = new Date(TODAY);
+  var start;
+  if (period === 'today') {
+    start = new Date(now); start.setHours(0,0,0,0);
+  } else if (period === 'week') {
+    start = new Date(now);
+    start.setDate(now.getDate() - now.getDay()); // Sunday
+    start.setHours(0,0,0,0);
+  } else if (period === 'ytd') {
+    start = new Date(now.getFullYear(), 0, 1);
+  }
+  return JOBS.filter(function(j) {
+    if (!j.date_created) return false;
+    var jd = new Date(j.date_created);
+    return jd >= start && jd <= now;
+  });
+}
+
+function getPeriodLabel(period) {
+  if (period === 'today') return 'today';
+  if (period === 'week') return 'this week';
+  if (period === 'ytd') return 'year to date';
+  return '';
+}
+
+/**
+ * Recalculates and redraws all CEO metric cards, charts, and gauges
+ * based on the currently active date period.
+ */
+function refreshCEOMetrics() {
+  var period = activePeriod;
+  var periodJobs = getPeriodJobs(period);
+  var label = getPeriodLabel(period);
+  var allActive = JOBS.filter(function(j){ return j.status==='open'||j.status==='won'; });
+
+  // ── Today's Sales / Pulse card ──
+  var pulseVal = periodJobs.reduce(function(s,j){ return s+j.value; }, 0);
+  var todayEl = document.getElementById('ceo-today-sales');
+  var todaySub = document.getElementById('ceo-today-sub');
+  if (todayEl) {
+    todayEl.textContent = fmt(pulseVal);
+    todayEl.className = 'card-value ' + (pulseVal > 0 ? 'green' : 'gold');
+  }
+  if (todaySub) {
+    todaySub.textContent = periodJobs.length > 0
+      ? periodJobs.length + ' job' + (periodJobs.length>1?'s':'') + ' added ' + label
+      : 'No jobs added ' + label;
+  }
+  // Update card label
+  var pulseLabel = document.querySelector('#ceo-today-sales').closest('.card').querySelector('.card-label');
+  if (pulseLabel) pulseLabel.innerHTML = '&#x26A1; The Pulse &mdash; ' +
+    (period==='today' ? "Today's Sales" : period==='week' ? "This Week's Sales" : "YTD Sales");
+
+  // ── Yesterday / Comparison card ──
+  var compJobs, compLabel;
+  if (period === 'today') {
+    var yest = new Date(TODAY); yest.setDate(yest.getDate()-1);
+    var yestStr = yest.toISOString().split('T')[0];
+    compJobs = JOBS.filter(function(j){ return j.date_created && j.date_created.startsWith(yestStr); });
+    compLabel = "Yesterday's Sales";
+  } else if (period === 'week') {
+    // Last week
+    var lws = new Date(TODAY); lws.setDate(lws.getDate() - lws.getDay() - 7);
+    var lwe = new Date(TODAY); lwe.setDate(lwe.getDate() - lwe.getDay() - 1);
+    compJobs = JOBS.filter(function(j){
+      if (!j.date_created) return false;
+      var d = new Date(j.date_created);
+      return d >= lws && d <= lwe;
+    });
+    compLabel = "Last Week's Sales";
+  } else {
+    // Last year
+    var lastYearStart = new Date(TODAY.getFullYear()-1, 0, 1);
+    var lastYearEnd = new Date(TODAY.getFullYear()-1, 11, 31);
+    compJobs = JOBS.filter(function(j){
+      if (!j.date_created) return false;
+      var d = new Date(j.date_created);
+      return d >= lastYearStart && d <= lastYearEnd;
+    });
+    compLabel = "Last Year's Sales";
+  }
+  var compVal = compJobs.reduce(function(s,j){ return s+j.value; }, 0);
+  var yestEl = document.getElementById('ceo-yesterday-sales');
+  var yestSub = document.getElementById('ceo-yesterday-sub');
+  if (yestEl) {
+    yestEl.textContent = fmt(compVal);
+    // Color: green if current > comparison, red if worse
+    yestEl.className = 'card-value ' + (pulseVal >= compVal ? 'green' : 'red');
+  }
+  if (yestSub) {
+    yestSub.textContent = compJobs.length > 0
+      ? compJobs.length + ' job' + (compJobs.length>1?'s':'') + ' — ' + compLabel.toLowerCase()
+      : 'No jobs — ' + compLabel.toLowerCase();
+  }
+  var compLabelEl = document.getElementById('ceo-yesterday-sales');
+  if (compLabelEl) {
+    var compCard = compLabelEl.closest('.card').querySelector('.card-label');
+    if (compCard) compCard.innerHTML = '&#x1F4C5; ' + compLabel;
+  }
+
+  // ── Pipeline / Net Profit cards ──
+  var pipelineVal = periodJobs.reduce(function(s,j){ return s+j.value; }, 0);
+  var profitVal = periodJobs.reduce(function(s,j){ return s+j.net_profit; }, 0);
+
+  // Update pipeline card
+  document.querySelectorAll('.card').forEach(function(card) {
+    var lbl = card.querySelector('.card-label');
+    if (!lbl) return;
+    if (lbl.textContent.includes('Total Pipeline')) {
+      var val = card.querySelector('.card-value');
+      var sub = card.querySelector('.card-sub');
+      if (val) val.textContent = fmt(periodJobs.length ? pipelineVal : JOBS.reduce(function(s,j){return s+j.value;},0));
+      if (sub) sub.textContent = periodJobs.length ? periodJobs.length+' job'+(periodJobs.length>1?'s':'')+' '+label : 'All active jobs combined';
+    }
+    if (lbl.textContent.includes('Net Profit')) {
+      var val2 = card.querySelector('.card-value');
+      var sub2 = card.querySelector('.card-sub');
+      if (val2) {
+        val2.textContent = fmt(periodJobs.length ? profitVal : JOBS.reduce(function(s,j){return s+j.net_profit;},0));
+        val2.className = 'card-value ' + ((periodJobs.length ? profitVal : 0) >= 0 ? 'green' : 'red');
+      }
+      if (sub2) sub2.textContent = periodJobs.length ? 'Net for '+label : 'After all labor costs';
+    }
+  });
+
+  // ── Red Flag Table ── (always shows all jobs below margin regardless of period)
+  // No change needed — red flags are structural, not time-based
+
+  // ── Velocity chart ── rebuild for period
+  var velocityCanvas = document.getElementById('ceo-velocity-chart');
+  var existingVelocity = Chart.getChart(velocityCanvas);
+  if (existingVelocity) existingVelocity.destroy();
+  buildVelocityChart(period);
+
+  // ── RPE Gauge ──
+  var monthStart = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+  var monthJobs = JOBS.filter(function(j){
+    var d = new Date(j.date_created || j.last_updated);
+    return d >= monthStart && d <= TODAY;
+  });
+  var monthlyRevenue = monthJobs.reduce(function(s,j){ return s+j.value; },0);
+  if (!monthlyRevenue) monthlyRevenue = JOBS.reduce(function(s,j){ return s+j.value; },0);
+  var rpeVal = Math.round(monthlyRevenue / CONFIG.HEADCOUNT);
+  var gaugeEl = document.getElementById('rpe-gauge-value');
+  var gaugeSub = document.getElementById('rpe-gauge-sub');
+  var gaugeFill = document.getElementById('rpe-gauge-fill');
+  if (gaugeEl) {
+    gaugeEl.textContent = fmt(rpeVal);
+    gaugeEl.style.color = rpeVal >= CONFIG.RPE_TARGET ? 'var(--green)' : rpeVal >= CONFIG.RPE_WARNING ? 'var(--orange)' : 'var(--red)';
+    if (gaugeSub) gaugeSub.textContent = fmt(monthlyRevenue) + ' pipeline ÷ ' + CONFIG.HEADCOUNT + ' employees — target $40K+/mo';
+    if (gaugeFill) {
+      var rpePct = Math.min(100, Math.round(rpeVal / CONFIG.RPE_GAUGE_MAX * 100));
+      gaugeFill.style.width = rpePct + '%';
+      gaugeFill.style.background = rpeVal >= CONFIG.RPE_TARGET ? 'var(--green)' : rpeVal >= CONFIG.RPE_WARNING ? 'var(--orange)' : 'var(--red)';
+    }
+  }
+
+  // ── Labor Cap Tracker ──
+  var totalVal2 = JOBS.reduce(function(s,j){return s+(j.value||0);},0);
+  var totalLabor2 = JOBS.reduce(function(s,j){return s+(j.labor_cost||0);},0);
+  var ceoLaborPct = totalVal2>0 ? (totalLabor2/totalVal2*100) : 0;
+  var lcPctRounded = ceoLaborPct.toFixed(1);
+  var lcColor = ceoLaborPct>15?"var(--red)":ceoLaborPct>13?"var(--orange)":"var(--green)";
+  var lcClass = ceoLaborPct>15?"red":ceoLaborPct>13?"orange":"green";
+  var lcEl = document.getElementById('ceo-laborcap-val');
+  var lcSub = document.getElementById('ceo-laborcap-sub');
+  var lcFill = document.getElementById('ceo-laborcap-fill');
+  if (lcEl) {
+    lcEl.textContent = lcPctRounded + '%';
+    lcEl.className = 'card-value ' + lcClass;
+    if (lcSub) lcSub.textContent = fmt(totalLabor2) + ' paid / ' + fmt(totalVal2) + ' contract — target 15% max';
+    if (lcFill) {
+      lcFill.style.width = Math.min(ceoLaborPct/30*100, 100) + '%';
+      lcFill.style.background = lcColor;
+    }
+  }
+
+  // ── Pending card ──
+  var pendingVal = document.getElementById('ceo-pending-val');
+  var pendingSub = document.getElementById('ceo-pending-sub');
+  if (pendingVal) {
+    var openJobs = periodJobs.length ? periodJobs.filter(function(j){return j.status==='open';})
+      : JOBS.filter(function(j){return j.status==='open';});
+    pendingVal.textContent = fmt(openJobs.reduce(function(s,j){return s+j.value;},0));
+    if (pendingSub) pendingSub.textContent = openJobs.length + ' active jobs ' + (periodJobs.length ? label : '');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// GM VIEW — Crew Filter & Tables
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Filters GM tables by the selected crew and refreshes all GM views.
+ * @param {string} val - crew name or 'all'
+ */
+function filterByCrew(val){
+  activeCrew=val;
+  var jobs=filteredJobs();
+  var count=document.getElementById("crew-filter-count");
+  if(val==="all") count.textContent="";
+  else count.textContent="Showing "+jobs.length+" jobs for "+val;
+  buildGMTables();
+}
+
+// ── CEO: Red Flag Table ─────────────────────────────────
+(function(){
+  var sorted=JOBS.slice().sort(function(a,b){return a.margin-b.margin;}).slice(0,CONFIG.RED_FLAG_COUNT);
+  var tbody=document.getElementById("ceo-redflag-body");
+  var html="";
+  sorted.forEach(function(j){
+    var days=daysSince(j.last_updated);
+    var rowClass=j.margin<CONFIG.MARGIN_WARNING?"row-red":j.margin<CONFIG.MARGIN_TARGET?"row-orange":"";
+    var sc=stallClass(days);
+    html+="<tr class='"+rowClass+"'><td><strong>"+j.name+"</strong></td><td style='color:var(--muted);font-size:11px'>"+j.client+"</td><td>"+fmt(j.value)+"</td><td><span class='badge "+(j.margin>=CONFIG.MARGIN_TARGET?"green":"red")+"'>"+j.margin+"%</span></td><td><span class='stall-pill "+sc+"'>"+days+"d</span></td><td style='font-size:11px;color:var(--red)'>"+( j.margin<CONFIG.MARGIN_TARGET?"Review pricing":"Monitor")+"</td>"+ghlLink(j.id)+"</tr>";
+  });
+  tbody.innerHTML=html;
+})();
+
+// ── GM: Jobs Starting Today ─────────────────────────────
+(function(){
+  var starting=JOBS.filter(function(j){return j.stage==="Ready for Production"&&j.status!=="won";});
+  var el=document.getElementById("gm-starting-today");
+  if(starting.length===0){
+    el.innerHTML="<div style='color:var(--muted);font-size:12px;padding:4px 0'>No installs scheduled today</div>";
+  } else {
+    el.innerHTML=starting.map(function(j){
+      return "<div class='stat-row'><span class='stat-label'>"+j.client+"</span><span class='stat-value' style='font-size:11px'>"+j.crew+"</span></div>";
+    }).join("");
+  }
+})();
+
+/**
+ * Builds (or rebuilds) all GM-view tables: Labor Watchdog and Margin Alert.
+ * Respects the active crew filter.
+ */
+function buildGMTables(){
+  var jobs=filteredJobs();
+
+  // Labor Watchdog — build string first, assign once
+  var lbody=document.getElementById("gm-labor-body");
+  var laborHtml="";
+  jobs.forEach(function(j){
+    var laborPct=pct(j.labor_cost,j.value);
+    var statusClass=laborPct>CONFIG.LABOR_CAP_PCT?"red":laborPct>CONFIG.LABOR_WARNING_PCT?"orange":"green";
+    var statusLabel=laborPct>CONFIG.LABOR_CAP_PCT?"OVER CAP":laborPct>CONFIG.LABOR_WARNING_PCT?"Approaching":"OK";
+    var rowClass=laborPct>CONFIG.LABOR_CAP_PCT?"row-red":laborPct>CONFIG.LABOR_WARNING_PCT?"row-orange":"";
+    laborHtml+="<tr class='"+rowClass+"'><td><strong style='font-size:11px'>"+j.name+"</strong></td><td style='font-size:11px;color:var(--muted)'>"+j.crew+"</td><td>"+fmt(j.value)+"</td><td>"+fmt(j.labor_budget)+"</td><td>"+fmt(j.labor_cost)+"</td><td><strong>"+laborPct+"%</strong></td><td><span class='badge "+statusClass+"'>"+statusLabel+"</span></td>"+ghlLink(j.id)+"</tr>";
+  });
+  lbody.innerHTML=laborHtml;
+
+  // Margin Alert — build string first, assign once
+  var mbody=document.getElementById("gm-margin-body");
+  var marginHtml="";
+  var below=jobs.filter(function(j){return j.margin<CONFIG.MARGIN_TARGET;});
+  if(below.length===0){
+    marginHtml="<tr><td colspan='7' style='padding:12px;color:var(--green);font-size:12px;text-align:center'>&#x2714; All jobs at or above 40% margin</td></tr>";
+  } else {
+    below.sort(function(a,b){return a.margin-b.margin;}).forEach(function(j){
+      var days=daysSince(j.last_updated);
+      var sc=stallClass(days);
+      marginHtml+="<tr class='row-red'><td><strong style='font-size:11px'>"+j.name+"</strong></td><td style='font-size:11px;color:var(--muted)'>"+j.crew+"</td><td>"+fmt(j.value)+"</td><td><span class='badge red'>"+j.margin+"%</span></td><td><span class='stall-pill "+sc+"'>"+days+"d</span></td><td style='font-size:11px;color:var(--red)'>Review material &amp; labor</td>"+ghlLink(j.id)+"</tr>";
+    });
+  }
+  mbody.innerHTML=marginHtml;
+}
+buildGMTables();
+
+// ── GM: Team Leaderboard ─────────────────────────────────
+(function(){
+  // Group jobs by crew, calc avg margin
+  var crews={};
+  JOBS.forEach(function(j){
+    if(!crews[j.crew]) crews[j.crew]={crew:j.crew,jobs:0,totalMargin:0,totalValue:0};
+    crews[j.crew].jobs++;
+    crews[j.crew].totalMargin+=j.margin;
+    crews[j.crew].totalValue+=j.value;
+  });
+  var crewList=Object.values(crews).map(function(c){
+    c.avgMargin=Math.round(c.totalMargin/c.jobs);
+    return c;
+  }).sort(function(a,b){return b.avgMargin-a.avgMargin;});
+
+  var rankClasses=["gold","silver","bronze"];
+  var el=document.getElementById("gm-leaderboard");
+  el.innerHTML="<thead><tr><th>#</th><th>Crew / Lead</th><th>Jobs</th><th>Avg Margin</th><th>Pipeline Value</th></tr></thead><tbody>"+
+    crewList.map(function(c,i){
+      var marginClass=c.avgMargin>=CONFIG.MARGIN_TARGET?"green":c.avgMargin>=38?"orange":"red";
+      return "<tr><td><span class='rank "+(rankClasses[i]||"silver")+"'>"+(i+1)+"</span></td><td><strong>"+c.crew+"</strong><br><span style='font-size:11px;color:var(--muted)'>"+CONFIG.CREW_NAMES[c.crew]+"</span></td><td>"+c.jobs+"</td><td><strong class='stat-value "+marginClass+"'>"+c.avgMargin+"%</strong></td><td>"+fmt(c.totalValue)+"</td></tr>";
+    }).join("")+"</tbody>";
+})();
+
+// ═══════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Builds the velocity bar chart showing jobs added per day.
+ * @param {string} period - 'today' | 'week' | 'ytd'
+ */
+function buildVelocityChart(period) {
+  var canvas = document.getElementById('ceo-velocity-chart');
+  if (!canvas) return;
+  // Destroy old chart if exists
+  var existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+
+  var days, labels = [], counts = [], values = [];
+  days = CONFIG.VELOCITY_DAYS[period] || 14;
+
+  for (var i = days-1; i >= 0; i--) {
+    var d = new Date(TODAY); d.setDate(d.getDate()-i);
+    var ds = d.toISOString().split('T')[0];
+    var shortLabel = period === 'ytd'
+      ? (i % 7 === 0 ? (d.getMonth()+1)+'/'+(d.getDate()) : '')
+      : (d.getMonth()+1)+'/'+(d.getDate());
+    labels.push(shortLabel);
+    var dayJobs = JOBS.filter(function(j){ return j.date_created && j.date_created.startsWith(ds); });
+    counts.push(dayJobs.length);
+    values.push(dayJobs.reduce(function(s,j){ return s+j.value; },0));
+  }
+
+  new Chart(canvas, {
+    type:'bar',
+    data:{
+      labels: labels,
+      datasets:[{
+        label:'Jobs Added',
+        data: counts,
+        backgroundColor: counts.map(function(c){ return c>0 ? 'rgba(194,160,74,0.85)' : 'rgba(224,224,224,0.4)'; }),
+        hoverBackgroundColor: counts.map(function(c){ return c>0 ? 'rgba(194,160,74,1)' : 'rgba(200,200,200,0.6)'; }),
+        borderRadius:3
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){
+          var idx=ctx.dataIndex;
+          return ctx.raw+' job'+(ctx.raw!==1?'s':'')+' — '+fmt(values[idx]);
+        }}}
+      },
+      scales:{
+        y:{min:0, ticks:{stepSize:1,font:{size:8}}, grid:{color:'#f5f5f5'}},
+        x:{ticks:{font:{size:8}, maxRotation:0}, grid:{display:false}}
+      },
+      onClick: function(evt, elements){
+        if(!elements.length) return;
+        var idx = elements[0].index;
+        if(counts[idx] === 0) return;
+        var d2 = new Date(TODAY); d2.setDate(d2.getDate()-(days-1-idx));
+        var ds2 = d2.toISOString().split('T')[0];
+        var dayJobs2 = JOBS.filter(function(j){ return j.date_created && j.date_created.startsWith(ds2); });
+        var totalVal2 = dayJobs2.reduce(function(s,j){ return s+j.value; },0);
+        var body = '<div class="modal-summary">'
+          +'<div class="modal-stat"><div class="modal-stat-label">Date</div><div class="modal-stat-value gold">'+ds2+'</div></div>'
+          +'<div class="modal-stat"><div class="modal-stat-label">Total Added</div><div class="modal-stat-value green">'+fmt(totalVal2)+'</div></div>'
+          +'</div>';
+        body += jobTable(dayJobs2,[COL.job, COL.value, COL.margin, COL.crew, COL.stage]);
+        openModal('Jobs Added — '+ds2, body);
+      },
+      onHover:function(evt,elements){
+        evt.native.target.style.cursor = elements.length&&counts[elements[0].index]>0?'pointer':'default';
+      }
+    }
+  });
+}
+
+if(view==="ceo"){
+  // Velocity chart built by buildVelocityChart()
+  buildVelocityChart('today');
+  // Run full metric refresh on page load
+  refreshCEOMetrics();
+
+
+  var scatterData=JOBS.map(function(j){return{x:j.value,y:j.margin,label:j.client.split(" ")[0],name:j.name};});
+  new Chart(document.getElementById("ceo-margin-chart"),{
+    type:"scatter",
+    data:{datasets:[
+      {label:"At/Above 40%",data:scatterData.filter(function(d){return d.y>=CONFIG.MARGIN_TARGET;}),backgroundColor:"rgba(42,122,74,0.75)",pointRadius:9,pointHoverRadius:12},
+      {label:"Below 40%",data:scatterData.filter(function(d){return d.y<CONFIG.MARGIN_TARGET;}),backgroundColor:"rgba(192,57,43,0.75)",pointRadius:9,pointHoverRadius:12},
+      {label:"40% Target",data:[{x:0,y:CONFIG.MARGIN_TARGET},{x:40000,y:CONFIG.MARGIN_TARGET}],type:"line",borderColor:"rgba(192,57,43,0.5)",borderDash:[6,4],borderWidth:2,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){var d=ctx.raw;return (d.label||"")+" — "+fmt(d.x||0)+" | "+(d.y||0)+"% margin";}}}},
+      scales:{
+        x:{title:{display:true,text:"Contract Value",font:{size:10},color:"#888"},ticks:{callback:function(v){return "$"+Math.round(v/1000)+"K";},font:{size:9}},grid:{color:"#f0f0f0"},min:0,max:40000},
+        y:{title:{display:true,text:"Gross Margin %",font:{size:10},color:"#888"},min:0,max:60,ticks:{callback:function(v){return v+"%";},font:{size:9}},grid:{color:"#f0f0f0"}}
+      }
+    }
+  });
+}
+
+if(view==="gm"){
+  new Chart(document.getElementById("gm-product-chart"),{
+    type:"bar",
+    data:{
+      labels:["LVP","Hardwood","Carpet","Tile"],
+      datasets:[{
+        label:"Avg Margin %",
+        data:[0,0,0,0],
+        backgroundColor:[green,gold,red,orange],
+        borderRadius:6
+      }]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.raw+"%";}}}},
+      scales:{
+        x:{min:0,max:60,ticks:{callback:function(v){return v+"%";},font:{size:9}},grid:{color:"#f0f0f0"}},
+        y:{ticks:{font:{size:11}},grid:{display:false}}
+      }
+    }
+  });
+}
+
+function initCFOChart(){
+  var canvas = document.getElementById("cfo-labor-chart");
+  if(!canvas) return;
+  var existingCfo = Chart.getChart(canvas);
+  if(existingCfo) existingCfo.destroy();
+  new Chart(canvas,{
+    type:"bar",
+    data:{labels:["Labor Budget","Labor Cost","Variance"],datasets:[{data:[0,0,0],backgroundColor:[gold,orange,green],borderRadius:6}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return "$"+Math.round(v/1000)+"K";}},grid:{color:"#f0f0f0"}},x:{grid:{display:false}}}}
+  });
+
+  // ── CFO Avg Gross Margin indicator ──
+  var cfoMarginEl = document.getElementById('cfo-margin-val');
+  var cfoMarginInd = document.getElementById('cfo-margin-indicator');
+  if (cfoMarginEl) {
+    var cfoAvgM = JOBS.length === 0 ? 0 : JOBS.reduce(function(s,j){return s+j.margin;},0)/JOBS.length;
+    var onTarget = cfoAvgM >= CONFIG.MARGIN_TARGET;
+    cfoMarginEl.textContent = cfoAvgM.toFixed(1) + '%';
+    cfoMarginEl.className = 'card-value ' + (onTarget ? 'green' : 'red');
+    cfoMarginEl.style.fontSize = '22px';
+    if (cfoMarginInd) {
+      var dotColor = onTarget ? 'var(--green)' : 'var(--red)';
+      var dotLabel = onTarget ? '&#x25B2; On Target' : '&#x25BC; Below Target';
+      cfoMarginInd.innerHTML = '<span style="color:'+dotColor+';font-size:11px;font-weight:600;font-family:\'DM Mono\',monospace">&#x25CF; '+dotLabel+'</span>';
+    }
+  }
+}
+initCFOChart();
+
+// ═══════════════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════════════
+
+function openModal(title,bodyHtml){
+  document.getElementById("modal-title").textContent=title;
+  document.getElementById("modal-body").innerHTML=bodyHtml;
+  document.getElementById("modal-overlay").className="modal-overlay open";
+}
+function closeModal(e){
+  if(!e||e.target===document.getElementById("modal-overlay"))
+    document.getElementById("modal-overlay").className="modal-overlay";
+}
+function jobTable(jobs,cols){
+  if(!jobs.length) return "<p style='color:var(--muted);font-size:13px;padding:20px 0'>No jobs found.</p>";
+  var h="<table class='job-table'><thead><tr>";
+  cols.forEach(function(c){h+="<th>"+c.label+"</th>";});
+  h+="</tr></thead><tbody>";
+  jobs.forEach(function(j){h+="<tr>";cols.forEach(function(c){h+="<td>"+c.fn(j)+"</td>";});h+="</tr>";});
+  h+="</tbody></table>";
+  return h;
+}
+
+/**
+ * Opens a detail modal for the given data type.
+ * @param {string} type - 'pipeline' | 'netprofit' | 'margin' | 'belowmargin' | 'stuck' | 'open' | 'won'
+ */
+function showModal(type){
+  var title,body;
+  if(type==="pipeline"){
+    title="All Jobs — Pipeline Detail";
+    var total=JOBS.reduce(function(s,j){return s+j.value;},0);
+    body="<div class='modal-summary'><div class='modal-stat'><div class='modal-stat-label'>Total Value</div><div class='modal-stat-value gold'>"+fmt(total)+"</div></div><div class='modal-stat'><div class='modal-stat-label'>Total Jobs</div><div class='modal-stat-value'>"+JOBS.length+"</div></div></div>";
+    body+=jobTable(JOBS,[COL.job, COL.value, COL.margin, COL.crew, COL.stage]);
+  } else if(type==="netprofit"){
+    title="Net Profit Breakdown";
+    var tp=JOBS.reduce(function(s,j){return s+j.net_profit;},0);
+    var tv=JOBS.reduce(function(s,j){return s+j.value;},0);
+    var profitPct = tv === 0 ? 0 : Math.round(tp/tv*100);
+    body="<div class='modal-summary'><div class='modal-stat'><div class='modal-stat-label'>Total Net Profit</div><div class='modal-stat-value green'>"+fmt(tp)+"</div></div><div class='modal-stat'><div class='modal-stat-label'>Profit Margin</div><div class='modal-stat-value green'>"+profitPct+"%</div></div></div>";
+    body+=jobTable(JOBS,[COL.job, COL.contract, COL.labor, COL.netProfitColored]);
+  } else if(type==="margin"){
+    title="Gross Margin by Job";
+    var below2=JOBS.filter(function(j){return j.margin<CONFIG.MARGIN_TARGET;});
+    var above=JOBS.filter(function(j){return j.margin>=CONFIG.MARGIN_TARGET;});
+    body="<div class='modal-summary'><div class='modal-stat'><div class='modal-stat-label'>At/Above 40%</div><div class='modal-stat-value green'>"+above.length+"</div></div><div class='modal-stat'><div class='modal-stat-label'>Below 40%</div><div class='modal-stat-value red'>"+below2.length+"</div></div></div>";
+    body+=jobTable(JOBS.slice().sort(function(a,b){return a.margin-b.margin;}),[COL.job, COL.margin, COL.contract, COL.netProfit]);
+  } else if(type==="belowmargin"){
+    title="Red Flag Jobs — Below 40% Margin";
+    var flagged=JOBS.filter(function(j){return j.margin<CONFIG.MARGIN_TARGET;});
+    body="<div class='modal-summary'><div class='modal-stat'><div class='modal-stat-label'>Flagged Jobs</div><div class='modal-stat-value red'>"+flagged.length+"</div></div><div class='modal-stat'><div class='modal-stat-label'>Action Required</div><div class='modal-stat-value orange'>Review Pricing</div></div></div>";
+    body+=jobTable(flagged,[COL.job, COL.margin, COL.contract, COL.stage]);
+  } else if(type==="stuck"){
+    title="Stuck Jobs — 3+ Days No Movement";
+    var stuckJobs=JOBS.filter(function(j){return j.status==="open"&&daysSince(j.last_updated)>=CONFIG.STALL_DAYS_ORANGE;});
+    body="<div class='modal-summary'><div class='modal-stat'><div class='modal-stat-label'>Stuck Jobs</div><div class='modal-stat-value orange'>"+stuckJobs.length+"</div></div><div class='modal-stat'><div class='modal-stat-label'>Value at Risk</div><div class='modal-stat-value orange'>"+fmt(stuckJobs.reduce(function(s,j){return s+j.value;},0))+"</div></div></div>";
+    body+=jobTable(stuckJobs,[COL.job, COL.daysIdle, COL.value, COL.crew, COL.stage]);
+  } else if(type==="open"){
+    title="Open Jobs — Active Pipeline";
+    var openJobs2=JOBS.filter(function(j){return j.status==="open";});
+    body="<div class='modal-summary'><div class='modal-stat'><div class='modal-stat-label'>Open Jobs</div><div class='modal-stat-value'>"+openJobs2.length+"</div></div><div class='modal-stat'><div class='modal-stat-label'>Open Value</div><div class='modal-stat-value gold'>"+fmt(openJobs2.reduce(function(s,j){return s+j.value;},0))+"</div></div></div>";
+    body+=jobTable(openJobs2,[COL.job, COL.value, COL.margin, COL.crew, COL.stage]);
+  } else if(type==="won"){
+    title="Jobs Won — Closed This Year";
+    var wonJobs=JOBS.filter(function(j){return j.status==="won";});
+    body="<div class='modal-summary'><div class='modal-stat'><div class='modal-stat-label'>Jobs Won</div><div class='modal-stat-value green'>"+wonJobs.length+"</div></div><div class='modal-stat'><div class='modal-stat-label'>Total Revenue</div><div class='modal-stat-value green'>"+fmt(wonJobs.reduce(function(s,j){return s+j.value;},0))+"</div></div></div>";
+    body+=jobTable(wonJobs,[COL.job, COL.value, COL.margin, {label:'Net Profit', fn: function(j){ return '<strong style="color:var(--green)">'+fmt(j.net_profit)+'</strong>'; }}]);
+  }
+  openModal(title,body);
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHANGE ORDERS
+// ═══════════════════════════════════════════════════════════
+
+var CHANGE_ORDERS = [];
+
+(function buildCOTable(){
+  var tbody = document.getElementById("gm-co-body");
+  if (!tbody) return;
+  if (!CHANGE_ORDERS.length) {
+    tbody.innerHTML = "<tr><td colspan='6' style='padding:12px;color:var(--green);font-size:12px;text-align:center'>&#x2714; No change orders logged</td></tr>";
+    return;
+  }
+  var totalValue = CHANGE_ORDERS.reduce(function(s,co){return s + (co.contract_value||0);}, 0);
+
+  tbody.innerHTML = CHANGE_ORDERS.map(function(co){
+    var statusClass = co.status === "complete" ? "green" : co.status === "labor alert" ? "red" : "gold";
+    var statusLabel = co.status === "complete" ? "Approved" : co.status === "labor alert" ? "Labor Alert" : "Pending";
+    // Find matching job name from JOBS array
+    var job = JOBS.find(function(j){return j.id === co.opportunity_id;});
+    var displayJob = job ? job.client + " — " + job.name : co.job_name;
+    return "<tr>" +
+      "<td><span style='font-size:11px;color:var(--muted)'>" + displayJob + "</span></td>" +
+      "<td><strong style='font-size:12px'>" + co.job_name + "</strong>" + (co.description ? "<br><span style='font-size:10px;color:var(--muted)'>" + co.description + "</span>" : "") + "</td>" +
+      "<td><strong style='color:var(--gold)'>" + fmt(co.contract_value) + "</strong></td>" +
+      "<td><span class='badge " + statusClass + "'>" + statusLabel + "</span></td>" +
+      "<td style='font-size:11px;color:var(--muted)'>" + co.date_created + "</td>" +
+      "<td><a href='" + co.url + "' target='_blank' style='font-size:10px;color:var(--gold);text-decoration:none;font-family:\"DM Mono\",monospace'>&#x2197; View</a></td>" +
+    "</tr>";
+  }).join("") +
+  "<tr style='background:#f8f8f8'><td colspan='2' style='font-size:10px;font-family:\"DM Mono\",monospace;color:var(--muted);padding:8px 10px'>TOTAL SCOPE ADDITIONS</td><td><strong style='color:var(--red)'>" + fmt(totalValue) + "</strong></td><td colspan='3'></td></tr>";
+})();
+
+// ═══════════════════════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════════════════════
+
+// Expose functions needed by HTML onclick/onchange handlers
+window.setDate = setDate;
+window.showModal = showModal;
+window.closeModal = closeModal;
+window.filterByCrew = filterByCrew;
+
+// Auto-select "Today" on load — runs after all functions are defined
+setDate(document.querySelector('.date-btn'), 'today');
+
+})(); // end async IIFE
+</script>
+</body>
+</html>

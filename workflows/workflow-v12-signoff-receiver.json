@@ -1,0 +1,51 @@
+{
+  "name": "{{client_name}} - v12 Signoff Receiver",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "{{slug}}-signoff",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "{{slug}}-signoff"
+    },
+    {
+      "parameters": {
+        "jsCode": "const https = require('https');\nconst urlMod = require('url');\nfunction httpReq(method, rawUrl, headers, postBody) {\n  return new Promise((resolve, reject) => {\n    const parsed = urlMod.parse(rawUrl);\n    const opts = { hostname: parsed.hostname, path: parsed.path, method: method, headers: headers || {} };\n    const req = https.request(opts, (res) => {\n      let body = '';\n      res.on('data', c => body += c);\n      res.on('end', () => {\n        let json = null;\n        try { json = JSON.parse(body); } catch(e) {}\n        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, json: json, text: body });\n      });\n    });\n    req.on('error', reject);\n    if (postBody) req.write(typeof postBody === 'string' ? postBody : JSON.stringify(postBody));\n    req.end();\n  });\n}\n\n// Signoff Receiver: processes crew sign-off form submissions\n// Updates GHL opportunity custom fields and creates ClickUp record\nconst GHL_TOKEN = '{{ghl_token}}';\nconst LOCATION_ID = '{{ghl_location_id}}';\nconst CLICKUP_TOKEN = '{{clickup_token}}';\nconst COMPLETED_LIST = '{{clickup_list_completed}}';\nconst GHL_BASE = 'https://services.leadconnectorhq.com';\nconst CU_BASE = 'https://api.clickup.com/api/v2';\nconst GHL_HEADERS = { 'Authorization': `Bearer ${GHL_TOKEN}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };\nconst CU_HEADERS = { 'Authorization': CLICKUP_TOKEN, 'Content-Type': 'application/json' };\n\nconst body = $input.first().json;\nconst oppId = body.opp_id;\nconst jobName = body.job_name || 'Unknown Job';\nconst crew = body.crew || '';\nconst goback = body.goback === 'true' || body.goback === true;\nconst notes = body.notes || '';\n\nif (!oppId) return [{ json: { status: 'error', message: 'No opp_id in form data' } }];\n\n// Update GHL opportunity custom fields\nconst updateFields = [\n  { id: '{{ghl_cf_signed_off}}', value: true },\n  { id: '{{ghl_cf_photos_uploaded}}', value: true },\n  { id: '{{ghl_cf_goback_required}}', value: goback },\n  { id: '{{ghl_cf_completion_date}}', value: new Date().toISOString() }\n];\n\nawait fetch(`${GHL_BASE}/opportunities/${oppId}`, {\n  method: 'PUT',\n  headers: GHL_HEADERS,\n  body: JSON.stringify({ customFields: updateFields })\n});\n\n// Create completion record in ClickUp\nconst taskBody = {\n  name: `Completed: ${jobName}`,\n  description: `**Sign-Off Record**\\nCrew: ${crew}\\nGo-Back Required: ${goback ? 'YES' : 'No'}\\nNotes: ${notes}\\nGHL Opportunity: ${oppId}\\nSubmitted: ${new Date().toISOString()}`,\n  status: goback ? 'review' : 'complete',\n  priority: goback ? 1 : 3\n};\n\nconst task = await httpReq('POST', `${CU_BASE}/list/${COMPLETED_LIST}/task`, CU_HEADERS, JSON.stringify(taskBody)\n);\nconst taskData = await task.json;\n\nreturn [{ json: { status: 'ok', opp_id: oppId, goback, clickup_task_id: taskData.id } }];\n"
+      },
+      "id": "process-signoff",
+      "name": "Process Signoff",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Signoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionTimeout": 30
+  }
+}

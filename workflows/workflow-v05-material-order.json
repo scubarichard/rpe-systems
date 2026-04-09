@@ -1,0 +1,51 @@
+{
+  "name": "{{client_name}} - v05 Material Order",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "{{slug}}-v05",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "{{slug}}-v05"
+    },
+    {
+      "parameters": {
+        "jsCode": "const https = require('https');\nconst urlMod = require('url');\nfunction httpReq(method, rawUrl, headers, postBody) {\n  return new Promise((resolve, reject) => {\n    const parsed = urlMod.parse(rawUrl);\n    const opts = { hostname: parsed.hostname, path: parsed.path, method: method, headers: headers || {} };\n    const req = https.request(opts, (res) => {\n      let body = '';\n      res.on('data', c => body += c);\n      res.on('end', () => {\n        let json = null;\n        try { json = JSON.parse(body); } catch(e) {}\n        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, json: json, text: body });\n      });\n    });\n    req.on('error', reject);\n    if (postBody) req.write(typeof postBody === 'string' ? postBody : JSON.stringify(postBody));\n    req.end();\n  });\n}\n\n// Material Order: creates ClickUp task when material order is placed\nconst GHL_TOKEN = '{{ghl_token}}';\nconst CLICKUP_TOKEN = '{{clickup_token}}';\nconst MATERIAL_LIST_ID = '{{clickup_list_current_pipeline}}';\nconst GHL_BASE = 'https://services.leadconnectorhq.com';\nconst CU_BASE = 'https://api.clickup.com/api/v2';\nconst GHL_HEADERS = { 'Authorization': `Bearer ${GHL_TOKEN}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };\nconst CU_HEADERS = { 'Authorization': CLICKUP_TOKEN, 'Content-Type': 'application/json' };\n\nconst body = $input.first().json;\nconst oppId = body.opportunity_id || body.id;\nif (!oppId) return [{ json: { status: 'error', message: 'No opportunity ID' } }];\n\n// Get opportunity details\nconst resp = await httpReq('GET', `${GHL_BASE}/opportunities/${oppId}`, GHL_HEADERS );\nconst opp = await resp.json;\nconst fields = opp.customFields || [];\nconst sku = (fields.find(f => f.id === '{{ghl_cf_material_sku}}'))?.value || 'Unknown SKU';\nconst orderTotal = (fields.find(f => f.id === '{{ghl_cf_material_order_total}}'))?.value || '0';\n\n// Create ClickUp task\nconst task = await fetch(`${CU_BASE}/list/${MATERIAL_LIST_ID}/task`, {\n  method: 'POST',\n  headers: CU_HEADERS,\n  body: JSON.stringify({\n    name: `Material Order: ${opp.name || oppId}`,\n    description: `SKU: ${sku}\\nOrder Total: $${orderTotal}\\nGHL Opportunity: ${oppId}`,\n    status: 'Open',\n    priority: 2\n  })\n});\nconst taskData = await task.json;\n\nreturn [{ json: { status: 'ok', opportunity_id: oppId, clickup_task_id: taskData.id, sku, order_total: orderTotal } }];\n"
+      },
+      "id": "create-order",
+      "name": "Create Material Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create Material Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionTimeout": 30
+  }
+}

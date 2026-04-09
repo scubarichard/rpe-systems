@@ -1,0 +1,51 @@
+{
+  "name": "{{client_name}} - v03 Field Validation Gate",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "{{slug}}-v03",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "{{slug}}-v03"
+    },
+    {
+      "parameters": {
+        "jsCode": "const https = require('https');\nconst urlMod = require('url');\nfunction httpReq(method, rawUrl, headers, postBody) {\n  return new Promise((resolve, reject) => {\n    const parsed = urlMod.parse(rawUrl);\n    const opts = { hostname: parsed.hostname, path: parsed.path, method: method, headers: headers || {} };\n    const req = https.request(opts, (res) => {\n      let body = '';\n      res.on('data', c => body += c);\n      res.on('end', () => {\n        let json = null;\n        try { json = JSON.parse(body); } catch(e) {}\n        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, json: json, text: body });\n      });\n    });\n    req.on('error', reject);\n    if (postBody) req.write(typeof postBody === 'string' ? postBody : JSON.stringify(postBody));\n    req.end();\n  });\n}\n\n// Field Validation Gate: ensures required fields are populated before stage advance\nconst GHL_TOKEN = '{{ghl_token}}';\nconst LOCATION_ID = '{{ghl_location_id}}';\nconst BASE = 'https://services.leadconnectorhq.com';\nconst HEADERS = { 'Authorization': `Bearer ${GHL_TOKEN}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };\n\nconst REQUIRED_FIELDS = {\n  '{{ghl_cf_labor_budget}}': 'Labor Budget',\n  '{{ghl_cf_crew_payout}}': 'Crew Payout',\n  '{{ghl_cf_gross_margin_pct}}': 'Gross Margin %',\n  '{{ghl_cf_product_type}}': 'Product Type',\n  '{{ghl_cf_crew}}': 'Crew Assignment'\n};\n\nconst body = $input.first().json;\nconst oppId = body.opportunity_id || body.id;\nif (!oppId) return [{ json: { status: 'error', message: 'No opportunity ID' } }];\n\nconst resp = await httpReq('GET', `${BASE}/opportunities/${oppId}`, HEADERS );\nconst opp = await resp.json;\nconst fields = opp.customFields || [];\n\nconst missing = [];\nfor (const [fieldId, fieldName] of Object.entries(REQUIRED_FIELDS)) {\n  const field = fields.find(f => f.id === fieldId);\n  if (!field || !field.value || field.value === '' || field.value === '0') {\n    missing.push(fieldName);\n  }\n}\n\nif (missing.length > 0) {\n  return [{ json: { status: 'blocked', opportunity_id: oppId, name: opp.name, missing_fields: missing, message: `Cannot advance: missing ${missing.join(', ')}` } }];\n}\nreturn [{ json: { status: 'ok', opportunity_id: oppId, message: 'All required fields populated' } }];\n"
+      },
+      "id": "validate-fields",
+      "name": "Validate Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionTimeout": 30
+  }
+}

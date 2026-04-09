@@ -1,0 +1,51 @@
+{
+  "name": "{{client_name}} - v02 Labor Cap Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "{{slug}}-v02",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "{{slug}}-v02"
+    },
+    {
+      "parameters": {
+        "jsCode": "const https = require('https');\nconst urlMod = require('url');\nfunction httpReq(method, rawUrl, headers, postBody) {\n  return new Promise((resolve, reject) => {\n    const parsed = urlMod.parse(rawUrl);\n    const opts = { hostname: parsed.hostname, path: parsed.path, method: method, headers: headers || {} };\n    const req = https.request(opts, (res) => {\n      let body = '';\n      res.on('data', c => body += c);\n      res.on('end', () => {\n        let json = null;\n        try { json = JSON.parse(body); } catch(e) {}\n        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, json: json, text: body });\n      });\n    });\n    req.on('error', reject);\n    if (postBody) req.write(typeof postBody === 'string' ? postBody : JSON.stringify(postBody));\n    req.end();\n  });\n}\n\n// Labor Cap Monitor: checks if crew payout exceeds labor budget\nconst GHL_TOKEN = '{{ghl_token}}';\nconst LOCATION_ID = '{{ghl_location_id}}';\nconst LABOR_BUDGET_FIELD = '{{ghl_cf_labor_budget}}';\nconst CREW_PAYOUT_FIELD = '{{ghl_cf_crew_payout}}';\nconst LABOR_CAP_PCT = {{labor_cap_pct}};\nconst BASE = 'https://services.leadconnectorhq.com';\nconst HEADERS = { 'Authorization': `Bearer ${GHL_TOKEN}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };\n\nconst body = $input.first().json;\nconst oppId = body.opportunity_id || body.id;\nif (!oppId) return [{ json: { status: 'error', message: 'No opportunity ID' } }];\n\nconst resp = await httpReq('GET', `${BASE}/opportunities/${oppId}`, HEADERS );\nconst opp = await resp.json;\n\nconst fields = opp.customFields || [];\nconst laborBudget = parseFloat((fields.find(f => f.id === LABOR_BUDGET_FIELD))?.value) || 0;\nconst crewPayout = parseFloat((fields.find(f => f.id === CREW_PAYOUT_FIELD))?.value) || 0;\nconst contractValue = parseFloat(opp.monetaryValue) || 0;\nconst laborPct = contractValue > 0 ? (crewPayout / contractValue * 100) : 0;\n\nif (laborPct > LABOR_CAP_PCT) {\n  return [{ json: { status: 'flagged', opportunity_id: oppId, name: opp.name, labor_pct: laborPct.toFixed(1), cap: LABOR_CAP_PCT, crew_payout: crewPayout, contract_value: contractValue, message: `Labor at ${laborPct.toFixed(1)}% exceeds ${LABOR_CAP_PCT}% cap` } }];\n}\nif (crewPayout > laborBudget && laborBudget > 0) {\n  return [{ json: { status: 'over_budget', opportunity_id: oppId, name: opp.name, crew_payout: crewPayout, labor_budget: laborBudget, overage: crewPayout - laborBudget } }];\n}\nreturn [{ json: { status: 'ok', opportunity_id: oppId, labor_pct: laborPct.toFixed(1) } }];\n"
+      },
+      "id": "check-labor",
+      "name": "Check Labor Cap",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check Labor Cap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionTimeout": 30
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "name": "{{client_name}} - v07 Payout Gate",
+  "nodes": [
+    {
+      "id": "wh",
+      "name": "ClickUp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "parameters": {"path": "{{slug}}-v07", "httpMethod": "POST", "responseMode": "onReceived"},
+      "webhookId": "{{slug}}-v07"
+    },
+    {
+      "id": "gt",
+      "name": "Get Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [220, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ \"https://api.clickup.com/api/v2/task/\"+$json.body.task_id }}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Authorization", "value": "{{clickup_token}}"}]},
+        "options": {}
+      }
+    },
+    {
+      "id": "s1",
+      "name": "Ext",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [440, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {"id": "a1", "name": "tn", "type": "string", "value": "={{ $json.name }}"},
+            {"id": "a2", "name": "cp", "type": "number", "value": "={{ parseFloat((($json.custom_fields||[]).find(f=>f.name===\"Crew Payout\")||{}).value||0) }}"},
+            {"id": "a3", "name": "lb", "type": "number", "value": "={{ parseFloat((($json.custom_fields||[]).find(f=>f.name===\"Labor Budget\")||{}).value||0) }}"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "g1",
+      "name": "Payout > 0?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 300],
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": false},
+          "conditions": [{"id": "c1", "leftValue": "={{ $json.cp }}", "operator": {"type": "number", "operation": "larger"}, "rightValue": 0}]
+        }
+      }
+    },
+    {
+      "id": "i1",
+      "name": "Over Budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [840, 200],
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": false},
+          "conditions": [{"id": "c2", "leftValue": "={{ $json.cp }}", "operator": {"type": "number", "operation": "larger"}, "rightValue": "={{ $json.lb }}"}]
+        }
+      }
+    },
+    {
+      "id": "sl1",
+      "name": "Slack - Blocked",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1040, 120],
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/{{slack_webhook}}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {"parameters": [{"name": "text", "value": "={{ \"PAYOUT BLOCKED: \"+$json.tn+\" — Crew Payout $\"+$json.cp+\" exceeds Labor Budget $\"+$json.lb }}"}]},
+        "options": {}
+      }
+    },
+    {
+      "id": "ok1",
+      "name": "Within Budget",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1040, 280],
+      "parameters": {}
+    },
+    {
+      "id": "no1",
+      "name": "No Payout",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [640, 440],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "ClickUp Webhook": {"main": [[{"node": "Get Task", "type": "main", "index": 0}]]},
+    "Get Task": {"main": [[{"node": "Ext", "type": "main", "index": 0}]]},
+    "Ext": {"main": [[{"node": "Payout > 0?", "type": "main", "index": 0}]]},
+    "Payout > 0?": {"main": [[{"node": "Over Budget?", "type": "main", "index": 0}], [{"node": "No Payout", "type": "main", "index": 0}]]},
+    "Over Budget?": {"main": [[{"node": "Slack - Blocked", "type": "main", "index": 0}], [{"node": "Within Budget", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionTimeout": 30}
+}

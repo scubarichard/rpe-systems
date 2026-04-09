@@ -1,0 +1,97 @@
+{
+  "name": "{{client_name}} - v04 Job Completion",
+  "nodes": [
+    {
+      "id": "wh",
+      "name": "GHL Webhook - Opportunity",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "parameters": {
+        "path": "{{slug}}-v04",
+        "httpMethod": "POST",
+        "responseMode": "onReceived"
+      },
+      "webhookId": "{{slug}}-v04"
+    },
+    {
+      "id": "s1",
+      "name": "Extract Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [220, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {"id": "a1", "name": "oppId", "type": "string", "value": "={{ $json.body.id }}"},
+            {"id": "a2", "name": "contactId", "type": "string", "value": "={{ $json.body.contact_id }}"},
+            {"id": "a3", "name": "oppName", "type": "string", "value": "={{ $json.body.opportunity_name }}"},
+            {"id": "a4", "name": "stage", "type": "string", "value": "={{ $json.body.pipleline_stage }}"},
+            {"id": "a5", "name": "margin", "type": "number", "value": "={{ $json.body.gross_margin || 100 }}"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "cu1",
+      "name": "Create Photo Gate Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [440, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.clickup.com/api/v2/list/{{clickup_list_completed}}/task",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{"name": "Authorization", "value": "{{clickup_token}}"}]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "name", "value": "={{ \"Photo Required: \" + $json.oppName }}"},
+            {"name": "description", "value": "={{ \"Job completed. Upload completion photos for: \" + $json.oppName }}"},
+            {"name": "status", "value": "to do"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ghl1",
+      "name": "Add Completion Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [660, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ \"https://services.leadconnectorhq.com/contacts/\" + $('Extract Fields').first().json.contactId + \"/notes\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "Bearer {{ghl_token}}"},
+            {"name": "Version", "value": "2021-07-28"}
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "body", "value": "={{ \"Job Completed: \" + $('Extract Fields').first().json.oppName + \". Photos required — ClickUp task created.\" }}"}
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "GHL Webhook - Opportunity": {"main": [[{"node": "Extract Fields", "type": "main", "index": 0}]]},
+    "Extract Fields": {"main": [[{"node": "Create Photo Gate Task", "type": "main", "index": 0}]]},
+    "Create Photo Gate Task": {"main": [[{"node": "Add Completion Note", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionTimeout": 30}
+}

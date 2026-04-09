@@ -1,0 +1,90 @@
+{
+  "name": "{{client_name}} - v08 CO Paid Recalc",
+  "nodes": [
+    {
+      "id": "wh",
+      "name": "ClickUp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "parameters": {"path": "{{slug}}-v08", "httpMethod": "POST", "responseMode": "onReceived"},
+      "webhookId": "{{slug}}-v08"
+    },
+    {
+      "id": "gt",
+      "name": "Get Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [220, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ \"https://api.clickup.com/api/v2/task/\" + $json.body.task_id }}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Authorization", "value": "{{clickup_token}}"}]},
+        "options": {}
+      }
+    },
+    {
+      "id": "s1",
+      "name": "Ext",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [440, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {"id": "a1", "name": "tn", "type": "string", "value": "={{ $json.name }}"},
+            {"id": "a2", "name": "cv", "type": "number", "value": "={{ parseFloat(($json.custom_fields||[]).find(f=>f.name===\"Contract Value\")?.value||0) }}"},
+            {"id": "a3", "name": "st", "type": "string", "value": "={{ $json.status?.status||\"\" }}"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "i1",
+      "name": "Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 300],
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": false},
+          "conditions": [{"id": "c1", "leftValue": "={{ $json.st }}", "operator": {"type": "string", "operation": "equals"}, "rightValue": "complete"}]
+        }
+      }
+    },
+    {
+      "id": "sl1",
+      "name": "Paid",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [880, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/{{slack_webhook}}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {"parameters": [{"name": "text", "value": "={{ \"CO Paid: \"+$json.tn+\" — $\"+$json.cv }}"}]},
+        "options": {}
+      }
+    },
+    {
+      "id": "no1",
+      "name": "Not Yet",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [880, 400],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "ClickUp Webhook": {"main": [[{"node": "Get Task", "type": "main", "index": 0}]]},
+    "Get Task": {"main": [[{"node": "Ext", "type": "main", "index": 0}]]},
+    "Ext": {"main": [[{"node": "Done?", "type": "main", "index": 0}]]},
+    "Done?": {"main": [[{"node": "Paid", "type": "main", "index": 0}], [{"node": "Not Yet", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionTimeout": 30}
+}
