@@ -1,0 +1,449 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RPE Systems — Chaos Tax Assessment</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+.container-fluid, .section-wrapper, .section, .row, .inner-container,
+[data-section-id], [class*="section"], [class*="container"], [class*="wrapper"] {
+  background-color: #1a2d5a !important;
+  background: #1a2d5a !important;
+}
+.container-fluid *, .section-wrapper *, .inner-container * { color: #f5f2eb; }
+.container-fluid em, .section-wrapper em { color: #b8962e !important; }
+</style>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: #1a2d5a; color: #f5f2eb; min-height: 100vh; font-size: 16px; line-height: 1.6; }
+.shell { min-height: 100vh; display: flex; flex-direction: column; }
+.top-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 40px; border-bottom: 1px solid rgba(255,255,255,0.18); background: #0f1d3a; position: sticky; top: 0; z-index: 50; }
+.logo { font-family: 'DM Serif Display', serif; font-size: 20px; color: #f5f2eb; letter-spacing: -0.02em; }
+.logo span { color: #b8962e; }
+.top-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(245,242,235,0.35); }
+.progress-wrap { padding: 0 40px; background: #223672; border-bottom: 1px solid rgba(255,255,255,0.15); }
+.progress-inner { max-width: 720px; margin: 0 auto; padding: 16px 0; display: flex; align-items: center; gap: 16px; }
+.progress-bar-track { flex: 1; height: 3px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: #b8962e; border-radius: 2px; transition: width 0.5s ease; width: 0%; }
+.progress-text { font-family: 'DM Mono', monospace; font-size: 11px; color: rgba(245,242,235,0.35); white-space: nowrap; }
+.chaos-meter { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.chaos-label { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(245,242,235,0.3); letter-spacing: 0.1em; text-transform: uppercase; }
+.chaos-value { font-family: 'DM Serif Display', serif; font-size: 18px; color: #b8962e; transition: all 0.4s ease; min-width: 80px; text-align: right; }
+.content { flex: 1; padding: 60px 40px; max-width: 760px; margin: 0 auto; width: 100%; }
+.screen { display: none; animation: fadeUp 0.4s ease both; }
+.screen.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.intro-eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #b8962e; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.intro-eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: #b8962e; opacity: 0.6; }
+.intro h1 { font-family: 'DM Serif Display', serif; font-size: clamp(32px, 5vw, 52px); line-height: 1.1; letter-spacing: -0.025em; margin-bottom: 24px; }
+.intro h1 em { font-style: italic; color: #b8962e; }
+.intro-body { font-size: 17px; font-weight: 300; color: rgba(245,242,235,0.6); line-height: 1.75; max-width: 580px; margin-bottom: 16px; }
+.definition-box { background: #243a7a; border-left: 3px solid #b8962e; padding: 20px 24px; margin: 32px 0; border-radius: 0 8px 8px 0; }
+.definition-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #b8962e; margin-bottom: 8px; }
+.definition-text { font-size: 15px; color: rgba(245,242,235,0.75); line-height: 1.7; font-style: italic; }
+.time-note { font-family: 'DM Mono', monospace; font-size: 12px; color: rgba(245,242,235,0.3); margin-bottom: 36px; }
+.section-tag { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(245,242,235,0.3); margin-bottom: 12px; }
+.q-number { font-family: 'DM Mono', monospace; font-size: 11px; color: #b8962e; margin-bottom: 8px; letter-spacing: 0.06em; }
+.question-text { font-family: 'DM Serif Display', serif; font-size: clamp(22px, 3.5vw, 32px); line-height: 1.2; letter-spacing: -0.015em; margin-bottom: 12px; color: #f5f2eb; }
+.question-sub { font-size: 14px; color: rgba(245,242,235,0.4); margin-bottom: 36px; line-height: 1.6; }
+.options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 36px; }
+.option { display: flex; align-items: flex-start; gap: 16px; padding: 18px 20px; background: #223672; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
+.option:hover { border-color: rgba(184,150,46,0.5); background: #2a4080; }
+.option.selected { border-color: #b8962e; background: rgba(184,150,46,0.08); }
+.option-dot { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.2); flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; transition: border-color 0.2s; }
+.option.selected .option-dot { border-color: #b8962e; background: #b8962e; }
+.option.selected .option-dot::after { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+.option-label { font-size: 15px; font-weight: 500; color: #f5f2eb; margin-bottom: 3px; }
+.option-detail { font-size: 13px; color: rgba(245,242,235,0.45); line-height: 1.5; }
+.option-cost { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 12px; color: #b8962e; flex-shrink: 0; padding-left: 16px; padding-top: 2px; opacity: 0; transition: opacity 0.3s; }
+.option.selected .option-cost { opacity: 1; }
+.slider-wrap { margin-bottom: 36px; }
+.slider-display { font-family: 'DM Serif Display', serif; font-size: 48px; color: #b8962e; margin-bottom: 8px; line-height: 1; }
+.slider-sublabel { font-size: 13px; color: rgba(245,242,235,0.4); margin-bottom: 20px; font-family: 'DM Mono', monospace; }
+input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none; margin-bottom: 8px; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #b8962e; cursor: pointer; border: 3px solid #1a2d5a; box-shadow: 0 0 0 1px #b8962e; }
+.slider-labels { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 11px; color: rgba(245,242,235,0.25); }
+.nav-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.btn-back { font-size: 14px; color: rgba(245,242,235,0.35); background: none; border: none; cursor: pointer; padding: 10px 0; font-family: 'DM Sans', sans-serif; transition: color 0.2s; display: flex; align-items: center; gap: 6px; }
+.btn-back:hover { color: rgba(245,242,235,0.7); }
+.btn-next { background: #b8962e; color: #fff; border: none; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 4px; cursor: pointer; transition: background 0.2s, transform 0.15s; letter-spacing: 0.02em; display: flex; align-items: center; gap: 8px; }
+.btn-next:hover { background: #9a7a22; transform: translateY(-1px); }
+.btn-next:disabled { background: rgba(184,150,46,0.3); cursor: not-allowed; transform: none; }
+.btn-start { background: #b8962e; color: #fff; border: none; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; padding: 18px 40px; border-radius: 4px; cursor: pointer; transition: background 0.2s; letter-spacing: 0.02em; }
+.btn-start:hover { background: #9a7a22; }
+.results-header { margin-bottom: 48px; }
+.results-eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(245,242,235,0.35); margin-bottom: 16px; }
+.results-h1 { font-family: 'DM Serif Display', serif; font-size: clamp(28px, 4vw, 42px); line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 16px; }
+.form-section { background: #243a7a; border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; padding: 28px 32px; }
+.form-title { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 4px; }
+.form-sub { font-size: 13px; color: rgba(245,242,235,0.4); margin-bottom: 24px; }
+.form-disclaimer { font-size: 12px; color: rgba(245,242,235,0.25); text-align: center; margin-top: 12px; font-family: 'DM Mono', monospace; }
+.confirm-screen { text-align: center; padding: 40px 0; }
+.confirm-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(29,106,58,0.15); border: 1px solid rgba(29,106,58,0.4); margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.confirm-h { font-family: 'DM Serif Display', serif; font-size: 32px; margin-bottom: 12px; }
+.confirm-body { font-size: 16px; color: rgba(245,242,235,0.55); max-width: 480px; margin: 0 auto; line-height: 1.7; }
+@media (max-width: 600px) {
+  .top-bar, .content, .progress-wrap { padding-left: 20px; padding-right: 20px; }
+  .progress-inner { gap: 10px; }
+  .chaos-label { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="top-bar">
+    <div class="logo">RPE <span>Systems</span></div>
+    <div class="top-label">Chaos Tax Assessment</div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-inner">
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-text" id="progressText">0 of 8</div>
+      <div class="chaos-meter">
+        <div class="chaos-label">Chaos Tax</div>
+        <div class="chaos-value" id="chaosDisplay">$0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="screen active" id="screen-intro">
+      <div class="intro">
+        <div class="intro-eyebrow">For flooring business owners only</div>
+        <h1>Find out exactly how much your business is <em>bleeding</em> right now.</h1>
+        <p class="intro-body">This assessment takes 3 minutes. It asks you 8 questions about how your business actually operates — not how you wish it operated. At the end, you'll receive your personal Chaos Tax: a dollar figure that represents what poor operational systems are costing you every single month.</p>
+        <div class="definition-box">
+          <div class="definition-label">What is the Chaos Tax?</div>
+          <div class="definition-text">"The invisible, compounding drain on your bank account caused by manual management, uncoordinated labor, and the absence of automated logic gates that allow profit to leak through every crack in your operations."</div>
+        </div>
+        <p class="time-note">3 minutes &nbsp;·&nbsp; 8 questions &nbsp;·&nbsp; 1 number that changes everything</p>
+        <button class="btn-start" onclick="startAssessment()">Calculate My Chaos Tax →</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-q1">
+      <div class="section-tag">Labor Management</div>
+      <div class="q-number">Question 1 of 8</div>
+      <div class="question-text">How do you currently track labor costs per job?</div>
+      <div class="question-sub">Be honest — this is the #1 place flooring companies lose money without knowing it.</div>
+      <div class="options" id="opts-q1">
+        <div class="option" data-q="q1" data-val="0" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">We have a system — labor is calculated per contract automatically</div><div class="option-detail">Real-time dashboard, labor cap enforced before payouts</div></div><div class="option-cost">+$0/mo</div></div>
+        <div class="option" data-q="q1" data-val="1200" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">We track it manually — spreadsheets or rough estimates per job</div><div class="option-detail">Someone on the team runs numbers, but not in real time</div></div><div class="option-cost">+$1,200/mo</div></div>
+        <div class="option" data-q="q1" data-val="2800" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">We find out at month-end when we look at the books</div><div class="option-detail">Labor costs are a surprise, not a system</div></div><div class="option-cost">+$2,800/mo</div></div>
+        <div class="option" data-q="q1" data-val="4500" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">Honestly — we don't really track it at all</div><div class="option-detail">Labor is paid out and we hope for the best</div></div><div class="option-cost">+$4,500/mo</div></div>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack()">← Back</button>
+        <button class="btn-next" id="next-q1" onclick="goNext('q1','q2')" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-q2">
+      <div class="section-tag">Job Completion & Verification</div>
+      <div class="q-number">Question 2 of 8</div>
+      <div class="question-text">How do you verify a job is actually complete before paying an installer?</div>
+      <div class="question-sub">Go-backs — unnecessary return trips — are the fastest way rising fuel costs become your problem.</div>
+      <div class="options" id="opts-q2">
+        <div class="option" data-q="q2" data-val="0" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">Digital sign-off required — photo upload + customer approval before payment</div><div class="option-detail">No photo, no paycheck. The system enforces it.</div></div><div class="option-cost">+$0/mo</div></div>
+        <div class="option" data-q="q2" data-val="800" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">We call or text the installer and take their word for it</div><div class="option-detail">Usually works, but no documentation or enforcement</div></div><div class="option-cost">+$800/mo</div></div>
+        <div class="option" data-q="q2" data-val="1800" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">A manager follows up — sometimes days later</div><div class="option-detail">Lag time creates disputes and go-backs</div></div><div class="option-cost">+$1,800/mo</div></div>
+        <div class="option" data-q="q2" data-val="3200" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">We pay when the installer says it's done and deal with issues after</div><div class="option-detail">Go-backs, disputes, and re-dos happen regularly</div></div><div class="option-cost">+$3,200/mo</div></div>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack()">← Back</button>
+        <button class="btn-next" id="next-q2" onclick="goNext('q2','q3')" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-q3">
+      <div class="section-tag">Sales Efficiency</div>
+      <div class="q-number">Question 3 of 8</div>
+      <div class="question-text">What percentage of your sales team's time goes toward leads that never close?</div>
+      <div class="question-sub">In a contracting economy, every hour spent on a tire-kicker is cash gone. This is your Revenue Per Employee leak.</div>
+      <div class="options" id="opts-q3">
+        <div class="option" data-q="q3" data-val="0" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">Under 15% — our leads are pre-qualified before they reach us</div><div class="option-detail">An automated system filters by project size, budget, timeline</div></div><div class="option-cost">+$0/mo</div></div>
+        <div class="option" data-q="q3" data-val="900" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">Around 25–35% — some dead-ends but manageable</div><div class="option-detail">Sales team does basic screening on their own</div></div><div class="option-cost">+$900/mo</div></div>
+        <div class="option" data-q="q3" data-val="2200" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">Around 40–55% — too many tire-kickers, it's frustrating</div><div class="option-detail">Salespeople spending real time on people who won't buy</div></div><div class="option-cost">+$2,200/mo</div></div>
+        <div class="option" data-q="q3" data-val="3800" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">More than half — we chase everything and close a fraction</div><div class="option-detail">No filter. Everyone who calls gets the full pitch.</div></div><div class="option-cost">+$3,800/mo</div></div>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack()">← Back</button>
+        <button class="btn-next" id="next-q3" onclick="goNext('q3','q4')" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-q4">
+      <div class="section-tag">Operational Visibility</div>
+      <div class="q-number">Question 4 of 8</div>
+      <div class="question-text">Right now, without making a call or opening a spreadsheet — do you know your net profit for the month?</div>
+      <div class="question-sub">If you can't see it, you can't protect it. Especially right now.</div>
+      <div class="options" id="opts-q4">
+        <div class="option" data-q="q4" data-val="0" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">Yes — I have a live dashboard that shows net profit at any moment</div><div class="option-detail">Cash collected, margin by product, labor variance — all visible</div></div><div class="option-cost">+$0/mo</div></div>
+        <div class="option" data-q="q4" data-val="1000" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">I could find out within a few hours by pulling reports</div><div class="option-detail">The data exists, just not at my fingertips</div></div><div class="option-cost">+$1,000/mo</div></div>
+        <div class="option" data-q="q4" data-val="2500" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">My bookkeeper sends a report at month-end — that's how I find out</div><div class="option-detail">30 days of blind spots before I see the damage</div></div><div class="option-cost">+$2,500/mo</div></div>
+        <div class="option" data-q="q4" data-val="4000" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">Honestly, no — I have a rough sense but not a real number</div><div class="option-detail">Running the business on feel, not data</div></div><div class="option-cost">+$4,000/mo</div></div>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack()">← Back</button>
+        <button class="btn-next" id="next-q4" onclick="goNext('q4','q5')" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-q5">
+      <div class="section-tag">Sales to Production Handoff</div>
+      <div class="q-number">Question 5 of 8</div>
+      <div class="question-text">What happens when a sale is closed? How does the job get to your installation crew?</div>
+      <div class="question-sub">The gap between "sold" and "scheduled" is one of the biggest silent cash leaks in any flooring operation.</div>
+      <div class="options" id="opts-q5">
+        <div class="option" data-q="q5" data-val="0" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">Automatic — the system triggers the production workflow the moment a deal closes</div><div class="option-detail">No human required to move the job forward</div></div><div class="option-cost">+$0/mo</div></div>
+        <div class="option" data-q="q5" data-val="700" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">A designated person handles the handoff — usually same day</div><div class="option-detail">Works when they're in, breaks down when they're out</div></div><div class="option-cost">+$700/mo</div></div>
+        <div class="option" data-q="q5" data-val="1800" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">The salesperson notifies someone manually — email, text, or verbal</div><div class="option-detail">Inconsistent. Things fall through depending on who's talking to who.</div></div><div class="option-cost">+$1,800/mo</div></div>
+        <div class="option" data-q="q5" data-val="3000" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">It's chaotic — jobs get lost, delayed, or double-booked regularly</div><div class="option-detail">Scheduling is a daily fire drill</div></div><div class="option-cost">+$3,000/mo</div></div>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack()">← Back</button>
+        <button class="btn-next" id="next-q5" onclick="goNext('q5','q6')" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-q6">
+      <div class="section-tag">Business Scale</div>
+      <div class="q-number">Question 6 of 8</div>
+      <div class="question-text">What is your average monthly revenue?</div>
+      <div class="question-sub">This calibrates your Chaos Tax to the actual size of your operation.</div>
+      <div class="slider-wrap">
+        <div class="slider-display" id="revenueDisplay">$250K</div>
+        <div class="slider-sublabel">per month</div>
+        <input type="range" id="revenueSlider" min="1" max="19" value="4" oninput="updateRevenue(this.value)">
+        <div class="slider-labels">
+          <span>$100K</span><span>$325K</span><span>$550K</span><span>$775K</span><span>$1M</span>
+        </div>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack()">← Back</button>
+        <button class="btn-next" onclick="goNext('q6','q7')">Continue →</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-q7">
+      <div class="section-tag">Overhead & Staffing</div>
+      <div class="q-number">Question 7 of 8</div>
+      <div class="question-text">How many office staff does it take to manage your current volume of jobs?</div>
+      <div class="question-sub">In a lean economy, the question is: could the system do what those people do — and let you run with fewer?</div>
+      <div class="options" id="opts-q7">
+        <div class="option" data-q="q7" data-val="0" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">1–2 people — the system does most of the coordination</div><div class="option-detail">Lean and systematized</div></div><div class="option-cost">+$0/mo</div></div>
+        <div class="option" data-q="q7" data-val="1500" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">3–4 people — standard for our volume</div><div class="option-detail">Likely one person whose job a system could absorb</div></div><div class="option-cost">+$1,500/mo</div></div>
+        <div class="option" data-q="q7" data-val="3000" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">5–6 people — things would fall apart without all of them</div><div class="option-detail">Overhead is high and vulnerable to any staff change</div></div><div class="option-cost">+$3,000/mo</div></div>
+        <div class="option" data-q="q7" data-val="5000" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">7+ people just to keep up — and we're still behind</div><div class="option-detail">Headcount is substituting for a system that doesn't exist</div></div><div class="option-cost">+$5,000/mo</div></div>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack()">← Back</button>
+        <button class="btn-next" id="next-q7" onclick="goNext('q7','q8')" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-q8">
+      <div class="section-tag">Owner Bandwidth</div>
+      <div class="q-number">Question 8 of 8</div>
+      <div class="question-text">How much of your day is spent putting out fires instead of building the business?</div>
+      <div class="question-sub">Your time has a dollar value. This is the most personal part of your Chaos Tax.</div>
+      <div class="options" id="opts-q8">
+        <div class="option" data-q="q8" data-val="0" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">Less than 20% — I work on the business, the system runs it</div><div class="option-detail">Conductor, not firefighter</div></div><div class="option-cost">+$0/mo</div></div>
+        <div class="option" data-q="q8" data-val="1200" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">About 30–40% — fires happen but I have pockets of strategic time</div><div class="option-detail">Manageable but improving would unlock real growth</div></div><div class="option-cost">+$1,200/mo</div></div>
+        <div class="option" data-q="q8" data-val="2500" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">More than half my day — I'm constantly reacting</div><div class="option-detail">The business can't move without me in the middle of everything</div></div><div class="option-cost">+$2,500/mo</div></div>
+        <div class="option" data-q="q8" data-val="4200" onclick="selectOption(this)"><div class="option-dot"></div><div class="option-content"><div class="option-label">Almost all of it — I bought myself a job, not a business</div><div class="option-detail">Every day is survival mode. Growth feels impossible.</div></div><div class="option-cost">+$4,200/mo</div></div>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack()">← Back</button>
+        <button class="btn-next" id="next-q8" onclick="calculateResults()" disabled>Calculate My Chaos Tax →</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-results">
+      <div class="results-header">
+        <div class="results-eyebrow">Your Assessment Results</div>
+        <div class="results-h1" id="results-headline">Here is what operational chaos is costing you.</div>
+      </div>
+
+      <div style="text-align:center; padding:60px 20px;">
+        <div style="font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.2em; color: rgba(245,242,235,0.4); margin-bottom: 20px; text-transform: uppercase;">
+          Your Chaos Level
+        </div>
+        <div id="severity-badge" style="font-family: 'DM Serif Display', serif; font-size: 72px; font-weight: bold; letter-spacing: 0.05em; color: #b8962e;">
+          CRITICAL
+        </div>
+        <div style="margin-top:20px; font-size:16px; color: rgba(245,242,235,0.5);">
+          Your detailed breakdown will be reviewed by RPE Systems.
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-title">Send me my full report</div>
+        <div class="form-sub">We'll send your complete Chaos Tax breakdown with a custom action plan. No obligation.</div>
+
+        <div id="ghl-form-container" style="min-height:1300px;">
+          <iframe
+            src="https://api.leadconnectorhq.com/widget/form/jI8gXSArqUDITmiryZ5G"
+            id="ghl-form-iframe"
+            style="width:100%;height:1300px;border:none;background:transparent;"
+            scrolling="no"
+            data-form-id="jI8gXSArqUDITmiryZ5G"
+            data-form-name="RPE Chaos Tax Assessment">
+          </iframe>
+        </div>
+
+        <div class="form-disclaimer">Your data is private. We will never sell or share your information.</div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-confirm">
+      <div class="confirm-screen">
+        <div class="confirm-icon">✓</div>
+        <div class="confirm-h">Report on its way.</div>
+        <div class="confirm-body">Your full Chaos Tax breakdown and custom action plan will be in your inbox within the hour. An RPE advisor will reach out within 24 hours to walk you through your results — no pressure, just clarity.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const screenOrder = ['intro','q1','q2','q3','q4','q5','q6','q7','q8','results','confirm'];
+let currentScreen = 'intro';
+let answers = {};
+let revenueMult = 1.0;
+let chaosTax = 0;
+
+const GHL_FORM_BASE_URL = 'https://api.leadconnectorhq.com/widget/form/jI8gXSArqUDITmiryZ5G';
+
+const revenueMap = {
+   1: { label: '$100K', mult: 0.40 },  2: { label: '$150K', mult: 0.55 },
+   3: { label: '$200K', mult: 0.70 },  4: { label: '$250K', mult: 0.85 },
+   5: { label: '$300K', mult: 1.00 },  6: { label: '$350K', mult: 1.15 },
+   7: { label: '$400K', mult: 1.30 },  8: { label: '$450K', mult: 1.45 },
+   9: { label: '$500K', mult: 1.60 }, 10: { label: '$550K', mult: 1.75 },
+  11: { label: '$600K', mult: 1.90 }, 12: { label: '$650K', mult: 2.05 },
+  13: { label: '$700K', mult: 2.20 }, 14: { label: '$750K', mult: 2.35 },
+  15: { label: '$800K', mult: 2.50 }, 16: { label: '$850K', mult: 2.65 },
+  17: { label: '$900K', mult: 2.80 }, 18: { label: '$950K', mult: 2.95 },
+  19: { label: '$1M',   mult: 3.20 }
+};
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  currentScreen = id;
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+function updateProgress() {
+  const answered = Object.keys(answers).length;
+  const pct = (answered / 8) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = answered + ' of 8';
+  document.getElementById('chaosDisplay').textContent = '$' + chaosTax.toLocaleString('en-US');
+}
+
+function startAssessment() { showScreen('q1'); }
+
+function selectOption(el) {
+  const q = el.dataset.q;
+  const val = parseInt(el.dataset.val);
+  document.querySelectorAll('#opts-' + q + ' .option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  answers[q] = val;
+  recalcChaos();
+  const btn = document.getElementById('next-' + q);
+  if (btn) btn.disabled = false;
+}
+
+function recalcChaos() {
+  let base = 0;
+  ['q1','q2','q3','q4','q5','q7','q8'].forEach(q => {
+    if (answers[q] !== undefined) base += answers[q];
+  });
+  chaosTax = Math.round(base * revenueMult);
+  updateProgress();
+}
+
+function updateRevenue(v) {
+  const r = revenueMap[v];
+  document.getElementById('revenueDisplay').textContent = r.label;
+  revenueMult = r.mult;
+  recalcChaos();
+}
+
+function goNext(from, to) { showScreen(to); }
+
+function goBack() {
+  const idx = screenOrder.indexOf(currentScreen);
+  if (idx > 0) showScreen(screenOrder[idx - 1]);
+}
+
+function getSeverity(tax) {
+  if (tax >= 15000) return { label: 'Critical' };
+  if (tax >= 8000)  return { label: 'High' };
+  return                   { label: 'Moderate' };
+}
+
+// Build the form iframe URL with all 10 scores as URL params
+function buildFormUrlWithScores() {
+  const sev = getSeverity(chaosTax);
+  const params = new URLSearchParams({
+    'rpe_-_chaos_tax_total':    chaosTax.toLocaleString('en-US'),
+    'rpe_-_chaos_tax_annual':   (chaosTax * 12).toLocaleString('en-US'),
+    'rpe_-_score_labor':        Math.round((answers['q1']||0) * revenueMult),
+    'rpe_-_score_verification': Math.round((answers['q2']||0) * revenueMult),
+    'rpe_-_score_leads':        Math.round((answers['q3']||0) * revenueMult),
+    'rpe_-_score_visibility':   Math.round((answers['q4']||0) * revenueMult),
+    'rpe_-_score_handoff':      Math.round((answers['q5']||0) * revenueMult),
+    'rpe_-_score_overhead':     Math.round((answers['q7']||0) * revenueMult),
+    'rpe_-_score_owner_time':   Math.round((answers['q8']||0) * revenueMult),
+    'rpe_-_chaos_rating':       sev.label
+  });
+  return GHL_FORM_BASE_URL + '?' + params.toString();
+}
+
+function calculateResults() {
+  recalcChaos();
+
+  const sev = getSeverity(chaosTax);
+  document.getElementById('severity-badge').textContent = sev.label.toUpperCase();
+  document.getElementById('results-headline').textContent = 'Your assessment has been completed.';
+
+  // Reload the iframe with scores baked into URL — form will carry them on submit
+  const iframe = document.getElementById('ghl-form-iframe');
+  iframe.src = buildFormUrlWithScores();
+
+  showScreen('results');
+}
+
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'iframe-height') {
+    const iframe = document.getElementById('ghl-form-iframe');
+    if (iframe && event.data.height) {
+      iframe.style.height = (event.data.height + 50) + 'px';
+    }
+  }
+  const msg = JSON.stringify(event.data || '');
+  if (msg.includes('submitted') || msg.includes('success') || msg.includes('thank')) {
+    showScreen('confirm');
+  }
+});
+
+updateRevenue(4);
+updateProgress();
+</script>
+</body>
+</html>
